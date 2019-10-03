@@ -1,7 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <csignal>
+#include <ctime>
+#include <iostream>
+
+#include "Utils.h"
+
+#define FILENAME "exMembership.txt"
+
 
 static int wait_for_start = 1;
 
@@ -38,6 +44,12 @@ int main(int argc, char** argv) {
     printf("Initializing.\n");
 
 
+    vector<process*> mProcs = parser(FILENAME);
+
+    for(auto p : mProcs) {
+        cout << *p << endl;
+    }
+/*
     //wait until start signal
     while(wait_for_start) {
         struct timespec sleep_time;
@@ -58,4 +70,7 @@ int main(int argc, char** argv) {
         sleep_time.tv_nsec = 0;
         nanosleep(&sleep_time, NULL);
     }
+
+    */
+return 0;
 }
