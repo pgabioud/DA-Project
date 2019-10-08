@@ -9,4 +9,5 @@ add_executable(DA_Project
         include/Protocol.h
         include/Utils.h
         src/da_proc.cpp
-        src/Utils.cpp )
+        src/Utils.cpp
+        src/Protocol.cpp)

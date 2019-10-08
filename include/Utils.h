@@ -25,12 +25,16 @@ struct process{
     string ip = "127.0.0.1";
     int port = 0;
     vector<int> affectedProcess;
-    struct addinfo * addinfo;
+    struct addrinfo * addrinfo;
 
 };
 
 inline ostream& operator<<(ostream& os, const process& p) {
-    os << "Process (" << p.id << ") - ip: " << p.ip << ", port: "<< p.port;
+    os << "Process (" << p.id << ") - ip: " << p.ip << ", port: " << p.port;
+
+    if(p.socket != -1) {
+        os << " , socket : " << p.socket;
+    }
 }
 
 

@@ -6,6 +6,8 @@
 #define PROJECT_PROTOCOL_H
 
 #include <string>
+#include <vector>
+#include "Utils.h"
 
 using namespace std;
 
@@ -17,26 +19,24 @@ protected:
     std::string         m_addr;
     struct addrinfo *   m_addrinfo;
 
+    vector<process*> m_procs;
+    int curr_proc;
 public:
 
-    Protocol(const std::string& addr, int port);
-    int                 get_socket() const {return m_socket;}
-    int                 get_port() const {return m_port;}
-    std::string         get_addr() const {return m_addr;}
+    Protocol(vector<process*> & processes, int curr_id);
 
-
-    virtual int send(const char * msg, size_t size) = 0;
-    virtual int rcv(char * msg, size_t size) = 0;
+    virtual int send(const char * msg, size_t size, process * p) = 0;
+    virtual int rcv(char * msg, size_t size, process * p) = 0;
 
 };
 
 class UDP: public Protocol {
 
 public:
-    UDP(const std::string& addr, int port);
+    UDP(vector<process*> & processes, int curr_id);
 
-    int send(const char * msg, size_t size);
-    int rcv(char * msg, size_t size);
+    int send(const char * msg, size_t size, process* p);
+    int rcv(char * msg, size_t size, process * p);
 
 };
 

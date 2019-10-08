@@ -10,9 +10,10 @@
 #include <cstring>
 #include "Protocol.h"
 
-Protocol::Protocol(const std::string &_addr, int _port)
-:m_port(_port), m_addr(_addr)
-{
+void init_socket(process* proc) {
+    int m_port = proc->port;
+    string m_addr = proc->ip;
+    struct addrinfo * m_addrinfo = proc->addrinfo;
     char decimal_port[16];
     snprintf(decimal_port, sizeof(decimal_port), "%d", m_port);
     decimal_port[sizeof(decimal_port) / sizeof(decimal_port[0]) - 1] = '\0';
@@ -26,24 +27,34 @@ Protocol::Protocol(const std::string &_addr, int _port)
     {
         throw runtime_error(("invalid address or port: \"" + m_addr + ":" + decimal_port + "\"").c_str());
     }
-    m_socket = socket(m_addrinfo->ai_family, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_UDP);
+    int m_socket = socket(m_addrinfo->ai_family, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_UDP);
     if(m_socket == -1)
     {
         freeaddrinfo(m_addrinfo);
         throw runtime_error(("could not create socket for: \"" + m_addr + ":" + decimal_port + "\"").c_str());
     }
+
+    proc->socket = m_socket;
 }
 
-UDP::UDP(const std::string &_addr, int _port)
-:Protocol(_addr, _port)
+Protocol::Protocol(vector<process*> &processes, int curr_id)
+:m_procs(processes), curr_proc(curr_id)
+{
+    for(auto & p: m_procs) {
+        init_socket(p);
+    }
+}
+
+UDP::UDP(vector<process*> &procs, int id)
+:Protocol(procs, id)
 {}
 
-int UDP::send(const char * msg, size_t size) {
-    return sendto(m_socket, msg, size, 0, m_addrinfo->ai_addr, m_addrinfo->ai_addrlen);
+int UDP::send(const char * msg, size_t size, process* p) {
+    return sendto(p->socket, msg, size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
 }
 
-int UDP::rcv(char *msg, size_t size) {
-    int er = recv(m_socket, msg, size, 0);
+int UDP::rcv(char *msg, size_t size, process* p) {
+    int er = recv(p->socket, msg, size, 0);
     if(er < 0) {
         cerr << "Error" << endl;
         return -1;

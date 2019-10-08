@@ -3,6 +3,7 @@
 #include <csignal>
 #include <ctime>
 #include <iostream>
+#include <Protocol.h>
 
 #include "Utils.h"
 
@@ -38,17 +39,25 @@ int main(int argc, char** argv) {
     signal(SIGINT, stop);
 
 
-    //parse arguments, including membership
-    //initialize application
-    //start listening for incoming UDP packets
     printf("Initializing.\n");
 
-
+    //parse arguments, including membership
+    //string filename = string(argv[2]);
+    //int curr_id = atoi(argv[1]);
+    int curr_id = 3;
     vector<process*> mProcs = parser(FILENAME);
+    //initialize application
 
+    UDP prot(mProcs, curr_id);
     for(auto p : mProcs) {
         cout << *p << endl;
     }
+
+    //start listening for incoming UDP packets
+
+    //start thread for listening
+    //start thread for sending
+
 /*
     //wait until start signal
     while(wait_for_start) {
