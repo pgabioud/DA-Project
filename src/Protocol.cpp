@@ -59,6 +59,5 @@ int UDP::rcv(char *msg, size_t size, process* p) {
         cerr << "Error" << endl;
         return -1;
     }
-
-    return 0;
+    return er;
 }

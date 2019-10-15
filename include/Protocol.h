@@ -13,14 +13,10 @@ using namespace std;
 
 class Protocol {
 
-protected:
-    int                 m_socket;
-    int                 m_port;
-    std::string         m_addr;
-    struct addrinfo *   m_addrinfo;
-
+public:
     vector<process*> m_procs;
     int curr_proc;
+    char * rcv_buffer;
 public:
 
     Protocol(vector<process*> & processes, int curr_id);

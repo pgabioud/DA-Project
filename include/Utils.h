@@ -6,7 +6,7 @@
 #define DA_PROJECT_UTILS_H
 
 #include <vector>
-#include <string>
+#include <cstring>
 using namespace std;
 
 /*

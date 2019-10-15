@@ -19,11 +19,12 @@ int stringToInt(string stringToConvert, string errorMessage, ifstream& readFile)
 
 vector<process*> parser(string fileToParse) {
     ifstream file(fileToParse);                    //normally Membership
+    cout << fileToParse << endl;
     vector<process*> processVector;
 
     //Get number of Process
 
-    if (file.is_open()) {
+    if (file) {
         int nbProcess;
         file >> nbProcess;
 
@@ -38,7 +39,6 @@ vector<process*> parser(string fileToParse) {
             getline(file, line);
             size_t pos = line.find(delimiter);
             string countString = line.substr(0, pos);
-
             countIp = stringToInt(countString, "##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (1) #####", file);
 
             istringstream iss(line.erase(0, pos + 1));
@@ -54,7 +54,6 @@ vector<process*> parser(string fileToParse) {
         }
 
         // Parsing Process Affectation
-
         int countBroad = 0;
         vector<vector<int>> processAffectation(nbProcess);
         while (countBroad < nbProcess) {

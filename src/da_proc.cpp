@@ -3,11 +3,11 @@
 #include <csignal>
 #include <ctime>
 #include <iostream>
-#include <Protocol.h>
-
+#include "Protocol.h"
 #include "Utils.h"
 
 #define FILENAME "exMembership.txt"
+#define MAXCHARS 255
 
 
 static int wait_for_start = 1;
@@ -31,6 +31,27 @@ static void stop(int signum) {
     exit(0);
 }
 
+void *send(void* arg) {
+    auto* prot = (Protocol*) arg;
+    prot->send("Hello!", 7, prot->m_procs[1]);
+    cout << "Message sent" << endl;
+
+}
+
+void *rcv(void * arg) {
+    auto* prot = (Protocol*) arg;
+
+    // reset buffer for receiving
+    memset(prot->rcv_buffer, 0, MAXCHARS + 1);
+    int rcv = 0;
+    while(rcv == 0) {
+        rcv = prot->rcv(prot->rcv_buffer, MAXCHARS, prot->m_procs[prot->curr_proc]);
+    }
+
+    cout << "Received :" << prot->rcv_buffer << endl;
+
+}
+
 int main(int argc, char** argv) {
 
     //set signal handlers
@@ -44,7 +65,8 @@ int main(int argc, char** argv) {
     //parse arguments, including membership
     //string filename = string(argv[2]);
     //int curr_id = atoi(argv[1]);
-    int curr_id = 3;
+    int curr_id = 0;
+
     vector<process*> mProcs = parser(FILENAME);
     //initialize application
 
@@ -54,11 +76,22 @@ int main(int argc, char** argv) {
     }
 
     //start listening for incoming UDP packets
+    pthread_t t1, t2;
+    int i = 1;
+    int j = 2;
 
-    //start thread for listening
-    //start thread for sending
+    /* Create 2 threads t1 and t2 with default attributes which will execute
+    function "thread_func()" in their own contexts with specified arguments. */
+    pthread_create(&t1, NULL, &thread_func, &i);
+    pthread_create(&t2, NULL, &thread_func, &j);
 
-/*
+    /* This makes the main thread wait on the death of t1 and t2. */
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    printf("In main thread\n");
+
+
     //wait until start signal
     while(wait_for_start) {
         struct timespec sleep_time;
@@ -67,6 +100,13 @@ int main(int argc, char** argv) {
         nanosleep(&sleep_time, NULL);
     }
 
+
+    //start thread for listening
+
+    //start thread for sending
+
+
+/*
 
     //broadcast messages
     printf("Broadcasting messages.\n");
