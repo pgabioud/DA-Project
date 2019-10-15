@@ -2,7 +2,10 @@
 #include <cstdlib>
 #include <csignal>
 #include <ctime>
+#include <sstream>
+#include <string>
 #include <iostream>
+#include <pthread.h>
 #include "Protocol.h"
 #include "Utils.h"
 
@@ -32,24 +35,34 @@ static void stop(int signum) {
 }
 
 void *send(void* arg) {
-    auto* prot = (Protocol*) arg;
-    prot->send("Hello!", 7, prot->m_procs[1]);
-    cout << "Message sent" << endl;
+    cout << "Start sending" << endl;
+    UDP* prot = (UDP*) arg;
+    for(auto p : prot->m_procs) {
+        if(p->id!= prot->curr_proc) {
+            stringstream ss;
+            ss << "Hello! from " << prot->curr_proc << endl;
+            cout << "Sending : " << ss.str();
+            prot->send("Hi", MAXCHARS, p->id );
+            cout << "Message sent to " << p->id <<  endl;
+            ss.clear();
+        }
+    }
 
 }
 
 void *rcv(void * arg) {
-    auto* prot = (Protocol*) arg;
+    cout << "Start receiving" << endl;
 
     // reset buffer for receiving
-    memset(prot->rcv_buffer, 0, MAXCHARS + 1);
     int rcv = 0;
-    while(rcv == 0) {
-        rcv = prot->rcv(prot->rcv_buffer, MAXCHARS, prot->m_procs[prot->curr_proc]);
-    }
+    UDP * prot = (UDP *)arg;
+    char * buf[MAXCHARS];
+    memset(buf, 0, MAXCHARS);
 
-    cout << "Received :" << prot->rcv_buffer << endl;
+    rcv = prot->rcv(buf,MAXCHARS);
 
+    cout << "Received :" << *buf << endl;
+    cout << "Receiving Done" << endl;
 }
 
 int main(int argc, char** argv) {
@@ -65,52 +78,32 @@ int main(int argc, char** argv) {
     //parse arguments, including membership
     //string filename = string(argv[2]);
     //int curr_id = atoi(argv[1]);
-    int curr_id = 0;
+    int curr_id = 1;
 
     vector<process*> mProcs = parser(FILENAME);
     //initialize application
 
-    UDP prot(mProcs, curr_id);
-    for(auto p : mProcs) {
-        cout << *p << endl;
-    }
+    UDP *prot = new UDP(mProcs, curr_id);
 
-    //start listening for incoming UDP packets
     pthread_t t1, t2;
-    int i = 1;
-    int j = 2;
-
-    /* Create 2 threads t1 and t2 with default attributes which will execute
-    function "thread_func()" in their own contexts with specified arguments. */
-    pthread_create(&t1, NULL, &thread_func, &i);
-    pthread_create(&t2, NULL, &thread_func, &j);
-
-    /* This makes the main thread wait on the death of t1 and t2. */
-    pthread_join(t1, NULL);
-    pthread_join(t2, NULL);
-
-    printf("In main thread\n");
-
+    //start listening for incoming UDP packets
+    pthread_create(&t1, NULL, &rcv, (void *) prot);
 
     //wait until start signal
-    while(wait_for_start) {
+   /* while(wait_for_start) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 0;
         sleep_time.tv_nsec = 1000;
         nanosleep(&sleep_time, NULL);
     }
-
-
-    //start thread for listening
-
-    //start thread for sending
-
-
-/*
+*/
+   //start thread for sending
+    printf("Broadcasting messages.\n");
+    pthread_create(&t2, NULL, &send, (void *) prot);
 
     //broadcast messages
-    printf("Broadcasting messages.\n");
 
+    pthread_join(t2, NULL);
 
     //wait until stopped
     while(1) {
@@ -120,6 +113,6 @@ int main(int argc, char** argv) {
         nanosleep(&sleep_time, NULL);
     }
 
-    */
-return 0;
+    pthread_exit(NULL);
+    return 0;
 }

@@ -21,8 +21,8 @@ public:
 
     Protocol(vector<process*> & processes, int curr_id);
 
-    virtual int send(const char * msg, size_t size, process * p) = 0;
-    virtual int rcv(char * msg, size_t size, process * p) = 0;
+    virtual int send(const char * msg, size_t size, int  p_id) = 0;
+    virtual int rcv(char ** msg, size_t size) = 0;
 
 };
 
@@ -31,8 +31,8 @@ class UDP: public Protocol {
 public:
     UDP(vector<process*> & processes, int curr_id);
 
-    int send(const char * msg, size_t size, process* p);
-    int rcv(char * msg, size_t size, process * p);
+    int send(const char * msg, size_t size, int p_id);
+    int rcv(char ** msg, size_t size);
 
 };
 

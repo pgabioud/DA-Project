@@ -35,6 +35,7 @@ void init_socket(process* proc) {
     }
 
     proc->socket = m_socket;
+    proc->addrinfo = m_addrinfo;
 }
 
 Protocol::Protocol(vector<process*> &processes, int curr_id)
@@ -43,18 +44,23 @@ Protocol::Protocol(vector<process*> &processes, int curr_id)
     for(auto & p: m_procs) {
         init_socket(p);
     }
+
+    for(auto & p: m_procs) {
+        cout << *p << endl;
+    }
 }
 
 UDP::UDP(vector<process*> &procs, int id)
 :Protocol(procs, id)
 {}
 
-int UDP::send(const char * msg, size_t size, process* p) {
-    return sendto(p->socket, msg, size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
+int UDP::send(const char * msg, size_t size, int p_id) {
+    auto *p = m_procs[p_id - 1];
+    return sendto(p->socket, &msg, size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
 }
 
-int UDP::rcv(char *msg, size_t size, process* p) {
-    int er = recv(p->socket, msg, size, 0);
+int UDP::rcv(char **msg, size_t size) {
+    int er = recv(m_procs[curr_proc]->socket, msg, size, 0);
     if(er < 0) {
         cerr << "Error" << endl;
         return -1;
