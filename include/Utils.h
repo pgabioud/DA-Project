@@ -62,5 +62,13 @@ int stringToInt(string stringToConvert, string errorMessage, ifstream& readFile)
  */
 vector<process*> parser(string fileToParse) ;
 
+/*
+ * Write the logs into a text file from a given vector of vector of logs
+ *
+ * @param: logFileName = string name of the log file
+ * @param: logs = vector of logs, each in the form of a vector of string
+ */
+void writeLogs(string logFileName, vector<vector<string>> * logs);
+
 
 #endif //DA_PROJECT_UTILS_H

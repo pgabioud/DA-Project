@@ -10,6 +10,10 @@
 #include <cstring>
 #include "Protocol.h"
 
+#define LOGFILE "da_proc_n.out"
+#define SIZE_LOG_BUFFER 10
+vector<vector<string>> logBuffer;
+
 void init_socket(process* proc) {
     int m_port = proc->port;
     string m_addr = proc->ip;
@@ -56,11 +60,35 @@ UDP::UDP(vector<process*> &procs, int id)
 
 int UDP::send(const char * msg, size_t size, int p_id) {
     auto *p = m_procs[p_id - 1];
+/////////////////////////
+    string seqNumb;
+    vector<string> newLog = {"b", seqNumb};
+    logBuffer.push_back(newLog);
+    if(logBuffer.size() == SIZE_LOG_BUFFER) {
+        writeLogs(LOGFILE, &logBuffer);
+        logBuffer.clear();
+    }
+    string stringMsg = to_string(p->id) + " " + seqNumb;
+    char newMsg[stringMsg.size() + 1];
+    strcpy(newMsg, stringMsg.c_str());
+//////////////////////////////////
     return sendto(p->socket, &msg, size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
 }
 
 int UDP::rcv(char **msg, size_t size) {
     int er = recv(m_procs[curr_proc]->socket, msg, size, 0);
+///////////////////////////////////
+    string stringMsg = *msg;
+    size_t pos = stringMsg.find(" ");
+    string processId = stringMsg.substr(0, pos);
+    string seqNumb = stringMsg.substr(pos+1, stringMsg.length());
+    vector<string> newLog = {"d", processId, seqNumb};
+    logBuffer.push_back(newLog);
+    if(logBuffer.size() == SIZE_LOG_BUFFER) {
+        writeLogs(LOGFILE, &logBuffer);
+        logBuffer.clear();
+    }
+//////////////////////////////////
     if(er < 0) {
         cerr << "Error" << endl;
         return -1;

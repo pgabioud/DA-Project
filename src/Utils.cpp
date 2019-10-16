@@ -90,6 +90,25 @@ void print(process * process){
     cout << "\nSocket : " << process->socket << "\n\n\n";
 }
 
+void writeLogs(string logFileName, vector<vector<string>> * logs) {
+    ofstream logFile;
+    logFile.open(logFileName, ios::out | ios::app);
+    if (logFile.is_open()) {
+        vector< vector<string> >::iterator iterVector;
+        vector<string>::iterator iterString;
+        for (iterVector = logs->begin(); iterVector != logs->end(); iterVector++) {
+            for (iterString = iterVector->begin(); iterString != iterVector->end(); iterString++) {
+                logFile << *iterString << " ";
+            }
+            logFile << "\n";
+        }
+
+        logFile.close();
+    } else {
+        throw string("##### error when trying to open the log file when wr #####");
+    }
+}
+
 //Test parser with exMembership.txt
 /*
 int main() {
@@ -97,6 +116,15 @@ int main() {
     for (int i = 0; i < testProcess.size(); i++) {
         print(testProcess[i]);
     }
+
+    vector<vector<string>> testLog = {
+            {"b", "1"},
+            {"b", "2"},
+            {"d", "2", "1"},
+            {"b", "1"}
+    };
+    vector<vector<string>>* testLogPointer = &testLog;
+    writeLogs("testLog.txt", testLogPointer);
     return 0;
 }
 */
