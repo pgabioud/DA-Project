@@ -38,7 +38,7 @@ void *send(void* arg) {
     cout << "Start sending" << endl;
     UDP* prot = (UDP*) arg;
     for(auto p : prot->m_procs) {
-        if(p->id!= prot->curr_proc) {
+        if(p->id!= prot->curr_proc + 1) {
             stringstream ss;
             ss << "Hello! from " << prot->curr_proc << endl;
             cout << "Sending : " << ss.str();
@@ -56,7 +56,7 @@ void *rcv(void * arg) {
     // reset buffer for receiving
     int rcv = 0;
     UDP * prot = (UDP *)arg;
-    char * buf[MAXCHARS];
+    char buf[MAXCHARS];
     memset(buf, 0, MAXCHARS);
 
     rcv = prot->rcv(buf,MAXCHARS);
@@ -76,13 +76,17 @@ int main(int argc, char** argv) {
     printf("Initializing.\n");
 
     //parse arguments, including membership
-    //string filename = string(argv[2]);
+    string filename = FILENAME;
     //int curr_id = atoi(argv[1]);
-    int curr_id = 1;
 
-    vector<process*> mProcs = parser(FILENAME);
+    int curr_id = 1;
+    if(argc != 1) {
+        curr_id = atoi(argv[1]);
+        filename = string(argv[2]);
+    }
     //initialize application
 
+    vector<process*> mProcs = parser(filename);
     UDP *prot = new UDP(mProcs, curr_id);
 
     pthread_t t1, t2;
@@ -106,13 +110,13 @@ int main(int argc, char** argv) {
     pthread_join(t2, NULL);
 
     //wait until stopped
-    while(1) {
+    /*while(1) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 1;
         sleep_time.tv_nsec = 0;
         nanosleep(&sleep_time, NULL);
     }
-
+*/
     pthread_exit(NULL);
     return 0;
 }

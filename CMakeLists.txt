@@ -6,11 +6,11 @@ find_package (Threads)
 
 include_directories(include)
 
-add_executable(project
+add_executable(da_proc
         include/Protocol.h
         include/Utils.h
         src/da_proc.cpp
         src/Utils.cpp
         src/Protocol.cpp)
 
-target_link_libraries (project ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (da_proc ${CMAKE_THREAD_LIBS_INIT})
