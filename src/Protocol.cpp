@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <sstream>
 #include <netdb.h>
 #include <cstring>
 #include "Protocol.h"
@@ -14,7 +15,7 @@
 #define SIZE_LOG_BUFFER 10
 vector<vector<string>> logBuffer;
 
-void init_socket(process* proc) {
+void Protocol::init_socket(process* proc) {
     int m_port = proc->port;
     string m_addr = proc->ip;
     struct addrinfo * m_addrinfo = proc->addrinfo;
@@ -41,11 +42,13 @@ void init_socket(process* proc) {
     }
 
     // bind socket
-    r = bind(m_socket, m_addrinfo->ai_addr, m_addrinfo->ai_addrlen);
-    if(r != 0)
-    {
-        freeaddrinfo(m_addrinfo);
-        cerr << "Could not bind socket to " << m_addr << " on port :" << m_port << endl;
+    if(proc->id == curr_proc + 1) {
+        r = bind(m_socket, m_addrinfo->ai_addr, m_addrinfo->ai_addrlen);
+        if(r != 0)
+        {
+            //freeaddrinfo(m_addrinfo);
+            cerr << "Could not bind socket to " << m_addr << " on port :" << m_port << endl;
+        }
     }
 
 
@@ -61,7 +64,11 @@ Protocol::Protocol(vector<process*> &processes, int curr_id)
         cout << *p << endl;
     }
 
+    //init variables
     seqNum = 1;
+    stringstream ss;
+    ss << "da_proc_" << curr_id << ".out" <<  endl;
+    log = ss.str();
 
 
 }
@@ -76,8 +83,8 @@ int UDP::send(const char * msg, size_t size, int p_id) {
     string seqNumb = to_string(seqNum);
     vector<string> newLog = {"b", seqNumb};
     logBuffer.push_back(newLog);
-    if(logBuffer.size() == SIZE_LOG_BUFFER) {
-        writeLogs(LOGFILE, &logBuffer);
+    if(logBuffer.size() <= SIZE_LOG_BUFFER) {
+        writeLogs(log, &logBuffer);
         logBuffer.clear();
     }
     string newMsg = to_string(curr_proc + 1) + " " + seqNumb;
@@ -110,8 +117,8 @@ int UDP::rcv(char *msg, size_t size) {
     string seqNumb = stringMsg.substr(pos+1, stringMsg.length());
     vector<string> newLog = {"d", processId, seqNumb};
     logBuffer.push_back(newLog);
-    if(logBuffer.size() == SIZE_LOG_BUFFER) {
-        writeLogs(LOGFILE, &logBuffer);
+    if(logBuffer.size() <= SIZE_LOG_BUFFER) {
+        writeLogs(log, &logBuffer);
         logBuffer.clear();
     }
 

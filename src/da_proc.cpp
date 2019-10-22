@@ -68,7 +68,7 @@ void *rcv(void * arg) {
 int main(int argc, char** argv) {
 
     //set signal handlers
-    signal(SIGUSR2, start);
+    signal(SIGUSR1, start);
     signal(SIGTERM, stop);
     signal(SIGINT, stop);
 
@@ -94,13 +94,13 @@ int main(int argc, char** argv) {
     pthread_create(&t1, NULL, &rcv, (void *) prot);
 
     //wait until start signal
-   /* while(wait_for_start) {
+   while(wait_for_start) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 0;
         sleep_time.tv_nsec = 1000;
         nanosleep(&sleep_time, NULL);
     }
-*/
+
    //start thread for sending
     printf("Broadcasting messages.\n");
     pthread_create(&t2, NULL, &send, (void *) prot);
@@ -110,13 +110,13 @@ int main(int argc, char** argv) {
     pthread_join(t2, NULL);
 
     //wait until stopped
-    /*while(1) {
+    while(1) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 1;
         sleep_time.tv_nsec = 0;
         nanosleep(&sleep_time, NULL);
     }
-*/
+
     pthread_exit(NULL);
     return 0;
 }

@@ -18,6 +18,7 @@ public:
     int curr_proc;
     char * rcv_buffer;
     int seqNum;
+    string log;
 public:
 
     Protocol(vector<process*> & processes, int curr_id);
@@ -25,7 +26,10 @@ public:
     virtual int send(const char * msg, size_t size, int  p_id) = 0;
     virtual int rcv(char * msg, size_t size) = 0;
 
-};
+    void init_socket(process* proc) ;
+
+
+    };
 
 class UDP: public Protocol {
 
