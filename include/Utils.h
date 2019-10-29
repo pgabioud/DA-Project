@@ -26,8 +26,26 @@ struct process{
     int port = 0;
     vector<int> affectedProcess;
     struct addrinfo * addrinfo;
-
 };
+
+class Message{
+public:
+    int sid;
+    string seqNum;
+    bool ack = false;
+
+public:
+    Message(int sid, string seqNum);
+
+    bool operator==(Message const& other) const {
+        return this->sid == other.sid && this->seqNum == other.seqNum;
+    }
+};
+
+Message::Message(int sid, string seqNum) {
+    this->sid = sid;
+    this->seqNum = seqNum;
+}
 
 inline ostream& operator<<(ostream& os, const process& p) {
     os << "Process (" << p.id << ") - ip: " << p.ip << ", port: " << p.port;

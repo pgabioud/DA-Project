@@ -12,7 +12,6 @@
 #define FILENAME "exMembership.txt"
 #define MAXCHARS 255
 
-
 static int wait_for_start = 1;
 
 static void start(int signum) {
@@ -48,10 +47,25 @@ void *rcv(void * arg) {
     while(1) {
         int rcv = 0;
         UDP *prot = (UDP *) arg;
+        vector<vector<string>> logBuffer;
         char buf[MAXCHARS];
         memset(buf, 0, MAXCHARS);
 
         rcv = prot->rcv(buf, MAXCHARS);
+
+        if (string(buf).empty()) {
+            return 0;
+        }
+        string stringMsg(buf);
+        size_t pos = stringMsg.find(" ");
+        string processId = stringMsg.substr(0, pos);
+        string seqNumb = stringMsg.substr(pos + 1, stringMsg.length());
+        vector<string> newLog = {"d", processId, seqNumb};
+        logBuffer.push_back(newLog);
+        if (logBuffer.size() <= prot->sizeBuffer) {
+            writeLogs(prot->log, &logBuffer);
+            logBuffer.clear();
+        }
 
         cout << "Received :" << *buf << endl;
         cout << "Receiving Done" << endl;

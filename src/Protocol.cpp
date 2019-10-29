@@ -9,10 +9,9 @@
 #include <sstream>
 #include <netdb.h>
 #include <cstring>
+#include <algorithm>
 #include "Protocol.h"
 
-#define LOGFILE "da_proc_n.out"
-#define SIZE_LOG_BUFFER 10
 vector<vector<string>> logBuffer;
 
 void Protocol::init_socket(process* proc) {
@@ -90,7 +89,7 @@ int Protocol::broadcast() {
     string seqNumb = to_string(seqNum);
     vector<string> newLog = {"b", seqNumb};
     logBuffer.push_back(newLog);
-    if(logBuffer.size() <= SIZE_LOG_BUFFER) {
+    if(logBuffer.size() <= sizeBuffer) {
         writeLogs(log, &logBuffer);
         logBuffer.clear();
     }
@@ -101,12 +100,10 @@ int Protocol::broadcast() {
 
 int UDP::send(const char * msg, size_t size, int p_id) {
     auto *p = m_procs[p_id - 1];
-/////////////////////////
 
     string seqNumb = to_string(seqNum);
     string newMsg = to_string(curr_proc + 1) + " " + seqNumb;
 
-//////////////////////////////////
     cout << "Sending to socket : [" << p->socket << "] ... message : "<< newMsg <<   endl;
     int er = sendto(p->socket, newMsg.c_str(), size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
     if(er < 0) {
@@ -116,31 +113,64 @@ int UDP::send(const char * msg, size_t size, int p_id) {
     return er;
 }
 
-int UDP::rcv(char *msg, size_t size) {
+Message UDP::rcv(char *msg, size_t size) {
     int sockfd = m_procs[curr_proc]->socket;
+    struct sockaddr_storage peer_addr;
+    socklen_t peer_addr_len;
+    char host[NI_MAXHOST], service[NI_MAXSERV];
+
     cout << "Receiving on socket : [" << sockfd <<"]" <<  endl;
-    int er = ::recv(sockfd, msg, size, 0);
+    int er = ::recvfrom(sockfd, msg, size, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
-
-///////////////////////////////////
-    if(string(msg).empty()) {
-        return 0;
-    }
-    string stringMsg(msg);
-    size_t pos = stringMsg.find(" ");
-    string processId = stringMsg.substr(0, pos);
-    string seqNumb = stringMsg.substr(pos+1, stringMsg.length());
-    vector<string> newLog = {"d", processId, seqNumb};
-    logBuffer.push_back(newLog);
-    if(logBuffer.size() <= SIZE_LOG_BUFFER) {
-        writeLogs(log, &logBuffer);
-        logBuffer.clear();
+    int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
+    if (s == 0) {
+        Message message = new Message();
+        return message;
+    } else {
+        fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
     }
 
-//////////////////////////////////
     if(er < 0) {
         cerr << "Error receiving" << endl;
-        return -1;
+        return ???;
     }
-    return er;
+}
+
+
+//Stubborn Links Modules
+StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
+:UDP(procs, id)
+{}
+
+int StubbornLinks::send(const char *msg, size_t size, int p_id) {
+    clock_t start;
+    start = clock();
+
+    while(((clock() - start) / (double) CLOCKS_PER_SEC) < timeout) {
+        UDP::send(msg, size, p_id);
+    }
+}
+
+Message StubbornLinks::rcv(char *msg, size_t size) {
+    UDP::rcv(msg, size);
+}
+
+
+//Perfect Links Module
+PerfectLinks::PerfectLinks(vector<process *> &procs, int id)
+:StubbornLinks(procs, id)
+{}
+
+int PerfectLinks::send(const char *msg, size_t size, int p_id) {
+    StubbornLinks::send(msg, size, p_id);
+}
+
+Message PerfectLinks::rcv(char *msg, size_t size) {
+    Message message = StubbornLinks::rcv(msg, size);
+    if(!(find(delivered.begin(), delivered.end(), message) != delivered.end())) {
+        delivered.push_back(message);
+        return message;
+    }
+    Message alreadyDeliveredMessage = Message(-1, " ");
+    return alreadyDeliveredMessage;
 }
