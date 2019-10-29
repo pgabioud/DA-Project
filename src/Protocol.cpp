@@ -77,9 +77,16 @@ UDP::UDP(vector<process*> &procs, int id)
 :Protocol(procs, id)
 {}
 
-int UDP::send(const char * msg, size_t size, int p_id) {
-    auto *p = m_procs[p_id - 1];
-/////////////////////////
+int Protocol::broadcast() {
+    for(auto p : m_procs) {
+        if(p->id!= curr_proc + 1) {
+            stringstream ss;
+            cout << "Sending : " << ss.str();
+            send("hum", 255, p->id);
+            cout << "Message sent to " << p->id <<  endl;
+            ss.clear();
+        }
+    }
     string seqNumb = to_string(seqNum);
     vector<string> newLog = {"b", seqNumb};
     logBuffer.push_back(newLog);
@@ -87,6 +94,16 @@ int UDP::send(const char * msg, size_t size, int p_id) {
         writeLogs(log, &logBuffer);
         logBuffer.clear();
     }
+
+
+    seqNum++;
+}
+
+int UDP::send(const char * msg, size_t size, int p_id) {
+    auto *p = m_procs[p_id - 1];
+/////////////////////////
+
+    string seqNumb = to_string(seqNum);
     string newMsg = to_string(curr_proc + 1) + " " + seqNumb;
 
 //////////////////////////////////
@@ -95,8 +112,6 @@ int UDP::send(const char * msg, size_t size, int p_id) {
     if(er < 0) {
         cerr << "Error sending message : " << newMsg << endl;
     }
-
-    seqNum++;
 
     return er;
 }

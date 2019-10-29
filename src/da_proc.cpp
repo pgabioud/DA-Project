@@ -37,16 +37,7 @@ static void stop(int signum) {
 void *send(void* arg) {
     cout << "Start sending" << endl;
     UDP* prot = (UDP*) arg;
-    for(auto p : prot->m_procs) {
-        if(p->id!= prot->curr_proc + 1) {
-            stringstream ss;
-            ss << "Hello! from " << prot->curr_proc << endl;
-            cout << "Sending : " << ss.str();
-            prot->send("Hi", MAXCHARS, p->id );
-            cout << "Message sent to " << p->id <<  endl;
-            ss.clear();
-        }
-    }
+    prot->broadcast();
 
 }
 
@@ -54,15 +45,17 @@ void *rcv(void * arg) {
     cout << "Start receiving" << endl;
 
     // reset buffer for receiving
-    int rcv = 0;
-    UDP * prot = (UDP *)arg;
-    char buf[MAXCHARS];
-    memset(buf, 0, MAXCHARS);
+    while(1) {
+        int rcv = 0;
+        UDP *prot = (UDP *) arg;
+        char buf[MAXCHARS];
+        memset(buf, 0, MAXCHARS);
 
-    rcv = prot->rcv(buf,MAXCHARS);
+        rcv = prot->rcv(buf, MAXCHARS);
 
-    cout << "Received :" << *buf << endl;
-    cout << "Receiving Done" << endl;
+        cout << "Received :" << *buf << endl;
+        cout << "Receiving Done" << endl;
+    }
 }
 
 int main(int argc, char** argv) {

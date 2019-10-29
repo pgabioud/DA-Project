@@ -28,6 +28,7 @@ public:
 
     void init_socket(process* proc) ;
 
+    int broadcast();
 
     };
 
