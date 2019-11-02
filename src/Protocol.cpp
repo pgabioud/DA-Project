@@ -81,7 +81,9 @@ int Protocol::broadcast() {
         if(p->id!= curr_proc + 1) {
             stringstream ss;
             cout << "Sending : " << ss.str();
-            send("hum", 255, p->id);
+            Message message = Message(curr_proc, p->id, to_string(seqNum).c_str(), 255, false);
+            send(&message);
+            //send("hum", 255, p->id);
             cout << "Message sent to " << p->id <<  endl;
             ss.clear();
         }
@@ -94,37 +96,38 @@ int Protocol::broadcast() {
         logBuffer.clear();
     }
 
-
     seqNum++;
 }
 
-int UDP::send(const char * msg, size_t size, int p_id) {
-    auto *p = m_procs[p_id - 1];
+int UDP::send(Message *message) {
+    auto *p = m_procs[message->sid - 1];
 
-    string seqNumb = to_string(seqNum);
-    string newMsg = to_string(curr_proc + 1) + " " + seqNumb;
+    string seqNumString = to_string(seqNum);
 
-    cout << "Sending to socket : [" << p->socket << "] ... message : "<< newMsg <<   endl;
-    int er = sendto(p->socket, newMsg.c_str(), size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
+    cout << "Sending to socket : [" << p->socket << "] ... message : "<< seqNumString <<   endl;
+    int er = sendto(p->socket, seqNumString.c_str(), message->size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
     if(er < 0) {
-        cerr << "Error sending message : " << newMsg << endl;
+        cerr << "Error sending message : " << seqNumString << endl;
     }
-
     return er;
 }
 
-Message UDP::rcv(char *msg, size_t size) {
+Message* UDP::rcv(Message *message) {
     int sockfd = m_procs[curr_proc]->socket;
     struct sockaddr_storage peer_addr;
     socklen_t peer_addr_len;
     char host[NI_MAXHOST], service[NI_MAXSERV];
+    char *msg;
 
     cout << "Receiving on socket : [" << sockfd <<"]" <<  endl;
-    int er = ::recvfrom(sockfd, msg, size, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
+    int er = ::recvfrom(sockfd, &message->seqNum, message->size, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
     if (s == 0) {
-        Message message = new Message();
+        int idSource = stringToInt(service)%11000;
+        message->sid = idSource;
+        message->did = curr_proc;
+        message->ack = false;
         return message;
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
@@ -132,7 +135,12 @@ Message UDP::rcv(char *msg, size_t size) {
 
     if(er < 0) {
         cerr << "Error receiving" << endl;
-        return ???;
+        message->sid = -1;
+        message->did = -1;
+        message->seqNum = " ";
+        message->size = 0;
+        message->ack = false;
+        return message;
     }
 }
 
@@ -142,17 +150,32 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
 :UDP(procs, id)
 {}
 
-int StubbornLinks::send(const char *msg, size_t size, int p_id) {
+int StubbornLinks::send(Message *message) {
+    /*
     clock_t start;
     start = clock();
 
     while(((clock() - start) / (double) CLOCKS_PER_SEC) < timeout) {
         UDP::send(msg, size, p_id);
     }
+    */
+    while(find(curr_sending.begin(), curr_sending.end(), message) != curr_sending.end()) {
+        UDP::send(message);
+    }
 }
 
-Message StubbornLinks::rcv(char *msg, size_t size) {
-    UDP::rcv(msg, size);
+Message* StubbornLinks::rcv(Message *message) {
+    if (!message->ack) {
+        UDP::rcv(message);
+        Message ackMessage = Message(message->did, message->sid, message->seqNum, message->size, true);
+    } else {
+        vector<Message*>::iterator it;
+        for (it = curr_sending.begin(); it != curr_sending.end(); ++it) {
+            if((*it) == message) {
+                curr_sending.erase(it);
+            }
+        }
+    }
 }
 
 
@@ -161,16 +184,20 @@ PerfectLinks::PerfectLinks(vector<process *> &procs, int id)
 :StubbornLinks(procs, id)
 {}
 
-int PerfectLinks::send(const char *msg, size_t size, int p_id) {
-    StubbornLinks::send(msg, size, p_id);
+int PerfectLinks::send(Message *message) {
+    StubbornLinks::send(message);
 }
 
-Message PerfectLinks::rcv(char *msg, size_t size) {
-    Message message = StubbornLinks::rcv(msg, size);
-    if(!(find(delivered.begin(), delivered.end(), message) != delivered.end())) {
-        delivered.push_back(message);
-        return message;
+Message* PerfectLinks::rcv(Message *message) {
+    vector<Message*>::iterator it;
+    for (it = delivered.begin(); it != delivered.end(); ++it) {
+        if((*it) == message) {
+            delivered.push_back(message);
+            StubbornLinks::rcv(message);
+            return message;
+        }
     }
-    Message alreadyDeliveredMessage = Message(-1, " ");
-    return alreadyDeliveredMessage;
+    Message alreadyDeliveredMessage = Message(-1, -1, " ", 0, false);
+    Message* alreadyDeliveredMessagePointer = &alreadyDeliveredMessage;
+    return alreadyDeliveredMessagePointer;
 }

@@ -45,29 +45,36 @@ void *rcv(void * arg) {
 
     // reset buffer for receiving
     while(1) {
-        int rcv = 0;
         UDP *prot = (UDP *) arg;
         vector<vector<string>> logBuffer;
+        /*
         char buf[MAXCHARS];
         memset(buf, 0, MAXCHARS);
+        */
 
-        rcv = prot->rcv(buf, MAXCHARS);
+        char* seqNum;
+        Message rcvMessage = Message(0, 0, seqNum, MAXCHARS, false);
+        prot->rcv(&rcvMessage);
 
-        if (string(buf).empty()) {
+        if (rcvMessage.sid == -1) {
             return 0;
         }
-        string stringMsg(buf);
+        string stringMsg(rcvMessage.seqNum);
+        vector<string> newLog = {"d", to_string(rcvMessage.sid), seqNum};
+        /*
         size_t pos = stringMsg.find(" ");
         string processId = stringMsg.substr(0, pos);
         string seqNumb = stringMsg.substr(pos + 1, stringMsg.length());
         vector<string> newLog = {"d", processId, seqNumb};
+        */
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
 
-        cout << "Received :" << *buf << endl;
+        //cout << "Received :" << *buf << endl;
+        cout << "Received :" << seqNum << endl;
         cout << "Receiving Done" << endl;
     }
 }

@@ -31,21 +31,22 @@ struct process{
 class Message{
 public:
     int sid;
-    string seqNum;
+    int did;
+    const char *seqNum;
+    size_t size;
     bool ack = false;
 
 public:
-    Message(int sid, string seqNum);
+    Message(int sid, int did, const char *seqNumP, size_t size, bool ack);
 
     bool operator==(Message const& other) const {
-        return this->sid == other.sid && this->seqNum == other.seqNum;
+        return this->sid == other.sid
+            && this->did == other.did
+            && this->seqNum == other.seqNum
+            && this->size == other.size
+            && this->ack == other.ack;
     }
 };
-
-Message::Message(int sid, string seqNum) {
-    this->sid = sid;
-    this->seqNum = seqNum;
-}
 
 inline ostream& operator<<(ostream& os, const process& p) {
     os << "Process (" << p.id << ") - ip: " << p.ip << ", port: " << p.port;
@@ -67,10 +68,8 @@ void print(process * process);
  * Convert string to integer
  *
  * @param: stringToConvert = the string to convert to integer
- * @param: errorMessage = the error massage if it fails
- * @param: readFile = the file to close if it fails
  */
-int stringToInt(string stringToConvert, string errorMessage, ifstream& readFile) ;
+int stringToInt(string stringToConvert) ;
 
 /*
  * Fonction that parse a given membership text file into process structure

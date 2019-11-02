@@ -6,13 +6,20 @@
 
 #include "Utils.h"
 
-int stringToInt(string stringToConvert, string errorMessage, ifstream& readFile) {
+Message::Message(int sid, int did, const char *seqNumP, size_t size, bool ack) {
+    this->sid = sid;
+    this->did = did;
+    this->seqNum = seqNumP;
+    this->size = size;
+    this->ack = ack;
+}
+
+int stringToInt(string stringToConvert) {
     int outputInt;
     istringstream iss(stringToConvert);
     iss >> outputInt;
     if (iss.fail()) {
-        readFile.close();
-        throw errorMessage;
+        return -666;
     }
     return outputInt;
 }
@@ -39,8 +46,11 @@ vector<process*> parser(string fileToParse) {
             getline(file, line);
             size_t pos = line.find(delimiter);
             string countString = line.substr(0, pos);
-            countIp = stringToInt(countString, "##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (1) #####", file);
-
+            countIp = stringToInt(countString);
+            if (countIp == -666) {
+                file.close();
+                throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (1) #####");
+            }
             istringstream iss(line.erase(0, pos + 1));
             vector<string> parsedLine((istream_iterator<string>(iss)),
                                                 istream_iterator<string>());
@@ -49,7 +59,11 @@ vector<process*> parser(string fileToParse) {
             processVector[countIp-1]->id = countIp;
             processVector[countIp-1]->ip = parsedLine[0];
 
-            int port = stringToInt(parsedLine[1], "##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (2) #####", file);
+            int port = stringToInt(parsedLine[1]);
+            if (port == -666) {
+                file.close();
+                throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (2) #####");
+            }
             processVector[countIp-1]->port = port;
         }
 
@@ -61,14 +75,22 @@ vector<process*> parser(string fileToParse) {
             size_t pos = line.find(delimiter);
             string countString = line.substr(0, pos);
 
-            countBroad = stringToInt(countString, "error when reading the indexes of the entries IP and Port of the Membership file when parsing (2)", file);
+            countBroad = stringToInt(countString);
+            if (countBroad == -666) {
+                file.close();
+                throw string("error when reading the indexes of the entries IP and Port of the Membership file when parsing (2)");
+            }
 
             istringstream issProcess(line.erase(0, pos + 1));
             int intId;
             vector<int> affect;
             string token;
             while (getline(issProcess, token, ' ')) {
-                intId = stringToInt(token, "##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (3) #####", file);
+                intId = stringToInt(token);
+                if (intId == -666) {
+                    file.close();
+                    throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (3) #####");
+                }
                 processVector[intId-1]->affectedProcess.push_back(countBroad);
             }
         }
