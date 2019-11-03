@@ -40,49 +40,36 @@ void *send(void* arg) {
 
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
 void *rcv(void * arg) {
-    cout << "Start receiving" << endl;
+    UDP *prot = (UDP *) arg;
+    vector<vector<string>> logBuffer;
+    int sock = prot->m_procs[prot->curr_proc]->socket;
+    cout << "Start receiving on socket : " <<sock << endl;
 
     // reset buffer for receiving
     while(1) {
-        UDP *prot = (UDP *) arg;
-        vector<vector<string>> logBuffer;
-        /*
-        char buf[MAXCHARS];
-        memset(buf, 0, MAXCHARS);
-        */
+        Message* rcvMessage = prot->rcv(NULL);
 
-        char* seqNum;
-        Message rcvMessage = Message(0, 0, seqNum, MAXCHARS, false);
-        prot->rcv(&rcvMessage);
-
-        if (rcvMessage.sid == -1) {
-            return 0;
+        if (rcvMessage->sid == -1) {
+            continue;
         }
-        string stringMsg(rcvMessage.seqNum);
-        vector<string> newLog = {"d", to_string(rcvMessage.sid), seqNum};
-        /*
-        size_t pos = stringMsg.find(" ");
-        string processId = stringMsg.substr(0, pos);
-        string seqNumb = stringMsg.substr(pos + 1, stringMsg.length());
-        vector<string> newLog = {"d", processId, seqNumb};
-        */
+        // write to log
+        vector<string> newLog = {"d", to_string(rcvMessage->sid + 1), rcvMessage->payload};
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
-
-        //cout << "Received :" << *buf << endl;
-        cout << "Received :" << seqNum << endl;
-        cout << "Receiving Done" << endl;
     }
 }
+#pragma clang diagnostic pop
 
 int main(int argc, char** argv) {
 
     //set signal handlers
-    signal(SIGUSR1, start);
+    signal(SIGUSR2, start);
     signal(SIGTERM, stop);
     signal(SIGINT, stop);
 

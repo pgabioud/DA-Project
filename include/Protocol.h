@@ -35,6 +35,8 @@ public:
     //Need for perfect links
     vector<Message*> delivered;
     vector<Message*> curr_sending;
+    vector<vector<int>> acks_per_proc;
+
 };
 
 class UDP: public Protocol {

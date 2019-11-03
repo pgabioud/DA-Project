@@ -3,13 +3,14 @@
 #include <cstring>
 #include <iterator>
 #include <iostream>
+#include <utility>
 
 #include "Utils.h"
 
-Message::Message(int sid, int did, const char *seqNumP, size_t size, bool ack) {
+Message::Message(int sid, int did, string payload, size_t size, bool ack) {
     this->sid = sid;
     this->did = did;
-    this->seqNum = seqNumP;
+    this->payload = std::move(payload);
     this->size = size;
     this->ack = ack;
 }

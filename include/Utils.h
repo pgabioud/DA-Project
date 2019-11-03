@@ -25,28 +25,30 @@ struct process{
     string ip = "127.0.0.1";
     int port = 0;
     vector<int> affectedProcess;
-    struct addrinfo * addrinfo;
+    struct sockaddr_in * addrinfo;
 };
 
 class Message{
 public:
     int sid;
     int did;
-    const char *seqNum;
+    string payload;
     size_t size;
     bool ack = false;
 
 public:
-    Message(int sid, int did, const char *seqNumP, size_t size, bool ack);
+    Message(int sid, int did, string payload, size_t size, bool ack);
 
     bool operator==(Message const& other) const {
         return this->sid == other.sid
-            && this->did == other.did
-            && this->seqNum == other.seqNum
-            && this->size == other.size
-            && this->ack == other.ack;
+            && this->payload == other.payload;
     }
 };
+
+inline ostream& operator<<(ostream& os, const Message& m) {
+    return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did + 1<< ", payload: " << m.payload
+        << ", size: " << m.size << ", ack : "<< m.ack<< ")";
+}
 
 inline ostream& operator<<(ostream& os, const process& p) {
     os << "Process (" << p.id << ") - ip: " << p.ip << ", port: " << p.port;

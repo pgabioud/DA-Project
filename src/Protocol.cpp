@@ -10,56 +10,50 @@
 #include <netdb.h>
 #include <cstring>
 #include <algorithm>
+#include <fstream>
 #include "Protocol.h"
 
 vector<vector<string>> logBuffer;
 
+#define ACK "ack"
+
 void Protocol::init_socket(process* proc) {
-    int m_port = proc->port;
+    int port = proc->port;
     string m_addr = proc->ip;
-    struct addrinfo * m_addrinfo = proc->addrinfo;
-    char decimal_port[16];
-    snprintf(decimal_port, sizeof(decimal_port), "%d", m_port);
-    decimal_port[sizeof(decimal_port) / sizeof(decimal_port[0]) - 1] = '\0';
-    struct addrinfo ai;
-    memset(&ai, 0, sizeof(ai));
-    ai.ai_family = AF_UNSPEC;
-    ai.ai_socktype = SOCK_DGRAM;
-    ai.ai_protocol = IPPROTO_UDP;
-    int r(getaddrinfo(m_addr.c_str(), decimal_port, &ai, &m_addrinfo));
-    if(r != 0 || m_addrinfo == NULL)
-    {
-        throw runtime_error(("invalid address or port: \"" + m_addr + ":" + decimal_port + "\"").c_str());
+
+    struct sockaddr_in* addr = (struct sockaddr_in*)malloc(sizeof(struct sockaddr_in));
+    int fd;
+
+    if ((fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+        perror("socket");
+        exit(1);
     }
 
-    //create socket
-    int m_socket = socket(m_addrinfo->ai_family, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_UDP);
-    if(m_socket == -1)
-    {
-        freeaddrinfo(m_addrinfo);
-        throw runtime_error(("could not create socket for: \"" + m_addr + ":" + decimal_port + "\"").c_str());
-    }
+    addr->sin_family = AF_INET;
+    addr->sin_addr.s_addr = inet_addr(m_addr.c_str());
+    addr->sin_port = htons(port);
 
-    // bind socket
-    if(proc->id == curr_proc + 1) {
-        r = bind(m_socket, m_addrinfo->ai_addr, m_addrinfo->ai_addrlen);
-        if(r != 0)
-        {
-            //freeaddrinfo(m_addrinfo);
-            cerr << "Could not bind socket to " << m_addr << " on port :" << m_port << endl;
+    if(curr_proc + 1== proc->id) {
+        if (bind(fd, (struct sockaddr *) addr, sizeof(*addr)) < 0) {
+            perror("bind");
+            exit(1);
+
         }
     }
 
-
-    proc->socket = m_socket;
-    proc->addrinfo = m_addrinfo;
+    proc->addrinfo = addr;
+    proc->socket = fd;
 }
 
 Protocol::Protocol(vector<process*> &processes, int curr_id)
 :m_procs(processes), curr_proc(curr_id - 1)
 {
+
     for(auto & p: m_procs) {
-        init_socket(p);
+            init_socket(p);
+    }
+    cout << "Sockets inited" << endl;
+    for(auto p:m_procs) {
         cout << *p << endl;
     }
 
@@ -68,8 +62,9 @@ Protocol::Protocol(vector<process*> &processes, int curr_id)
     stringstream ss;
     ss << "da_proc_" << curr_id << ".out" <<  endl;
     log = ss.str();
-
-
+    ofstream ofs;
+    ofs.open(log, std::ofstream::out | std::ofstream::trunc);
+    ofs.close();
 }
 
 UDP::UDP(vector<process*> &procs, int id)
@@ -77,15 +72,12 @@ UDP::UDP(vector<process*> &procs, int id)
 {}
 
 int Protocol::broadcast() {
+    //string m = to_string(curr_proc + 1) + " " + to_string(seqNum);
+    string m = "ack " + to_string(seqNum);
     for(auto p : m_procs) {
         if(p->id!= curr_proc + 1) {
-            stringstream ss;
-            cout << "Sending : " << ss.str();
-            Message message = Message(curr_proc, p->id, to_string(seqNum).c_str(), 255, false);
+            Message message = Message(curr_proc, p->id - 1, m, m.size(), false);
             send(&message);
-            //send("hum", 255, p->id);
-            cout << "Message sent to " << p->id <<  endl;
-            ss.clear();
         }
     }
     string seqNumb = to_string(seqNum);
@@ -96,52 +88,66 @@ int Protocol::broadcast() {
         logBuffer.clear();
     }
 
+    cout << "Broadcast done" << endl;
     seqNum++;
 }
 
 int UDP::send(Message *message) {
-    auto *p = m_procs[message->sid - 1];
+    auto *p = m_procs[message->did];
 
-    string seqNumString = to_string(seqNum);
-
-    cout << "Sending to socket : [" << p->socket << "] ... message : "<< seqNumString <<   endl;
-    int er = sendto(p->socket, seqNumString.c_str(), message->size, 0, p->addrinfo->ai_addr, p->addrinfo->ai_addrlen);
+    cout << "Sending to socket : [" << p->socket << "] message : ["<< message->payload << "]" <<  endl;
+    int er = sendto(p->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
-        cerr << "Error sending message : " << seqNumString << endl;
+        cerr << "Error sending message : " << message << endl;
     }
     return er;
 }
 
-Message* UDP::rcv(Message *message) {
+Message* UDP::rcv(Message *upper_m) {
     int sockfd = m_procs[curr_proc]->socket;
-    struct sockaddr_storage peer_addr;
+    struct sockaddr_in peer_addr;
     socklen_t peer_addr_len;
+    peer_addr_len = sizeof(peer_addr);
     char host[NI_MAXHOST], service[NI_MAXSERV];
-    char *msg;
 
-    cout << "Receiving on socket : [" << sockfd <<"]" <<  endl;
-    int er = ::recvfrom(sockfd, &message->seqNum, message->size, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
+    char msg_buf[255];
+    size_t len = 255;
 
-    int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-    if (s == 0) {
-        int idSource = stringToInt(service)%11000;
-        message->sid = idSource;
-        message->did = curr_proc;
-        message->ack = false;
-        return message;
-    } else {
-        fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-    }
+    int er = recvfrom(sockfd, msg_buf, len, MSG_DONTWAIT, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
-        cerr << "Error receiving" << endl;
-        message->sid = -1;
-        message->did = -1;
-        message->seqNum = " ";
-        message->size = 0;
-        message->ack = false;
-        return message;
+        return new Message(-1,-1,"",1, false);
     }
+
+    Message* m;
+
+    int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
+    cout << peer_addr.sin_port << endl;
+    if (s == 0) {
+        int idSource = -1;
+
+        for(auto p:m_procs) {
+            if(p->addrinfo == &peer_addr) {
+                cout << "Found match" << endl;
+            }
+        }
+
+        string payload = string(msg_buf);
+        bool ack = false;
+        if (payload.find(ACK) != std::string::npos) {
+            // message is ack message
+            ack = true;
+        }
+
+        m = new Message(idSource,curr_proc,string(msg_buf),string(msg_buf).size(), ack);
+
+        cout << "Received :" << *m << endl;
+    } else {
+        fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+        m = new Message(-1,-1,"",0, false);
+    }
+
+    return m;
 }
 
 
@@ -150,31 +156,34 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
 :UDP(procs, id)
 {}
 
-int StubbornLinks::send(Message *message) {
-    /*
-    clock_t start;
-    start = clock();
+int StubbornLinks::send(Message *m) {
 
-    while(((clock() - start) / (double) CLOCKS_PER_SEC) < timeout) {
-        UDP::send(msg, size, p_id);
+    // message is never ack so payload is always the seq number
+    vector<int> curr_acks = acks_per_proc[m->sid];
+    int seqNum = stringToInt(m->payload);
+    while(find(curr_acks.begin(), curr_acks.end(), seqNum ) == curr_acks.end()) {
+        UDP::send(m);
     }
-    */
-    while(find(curr_sending.begin(), curr_sending.end(), message) != curr_sending.end()) {
-        UDP::send(message);
-    }
+    cout << "Stopped sending message : [" << m << "]" << endl;
 }
 
-Message* StubbornLinks::rcv(Message *message) {
-    if (!message->ack) {
-        UDP::rcv(message);
-        Message ackMessage = Message(message->did, message->sid, message->seqNum, message->size, true);
+Message* StubbornLinks::rcv(Message *m) {
+
+    m = UDP::rcv(NULL);
+
+    if(m->ack) {
+        // payload is of format "ack #"
+        string seq = m->payload.substr(3);
+        int seqNum = stringToInt(seq);
+        acks_per_proc[m->sid].push_back(seqNum);
+        cout << acks_per_proc[m->sid][0] << endl;
+        // discard message
     } else {
-        vector<Message*>::iterator it;
-        for (it = curr_sending.begin(); it != curr_sending.end(); ++it) {
-            if((*it) == message) {
-                curr_sending.erase(it);
-            }
-        }
+        // send ack
+        auto* ackMess = new Message(m->sid, m->did, "ack " + m->payload, m->payload.size() + 4, true);
+        UDP::send(ackMess);
+        delete ackMess;
+        return m;
     }
 }
 
