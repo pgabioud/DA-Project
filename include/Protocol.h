@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include "Utils.h"
 
 using namespace std;
@@ -33,9 +34,8 @@ public:
 
 public:
     //Need for perfect links
-    vector<Message*> delivered;
-    vector<Message*> curr_sending;
-    vector<vector<int>> acks_per_proc;
+    vector<set<int>> delivered;
+    vector<set<int>> acks_per_proc;
 
 };
 

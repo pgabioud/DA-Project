@@ -46,7 +46,7 @@ void Protocol::init_socket(process* proc) {
 }
 
 Protocol::Protocol(vector<process*> &processes, int curr_id)
-:m_procs(processes), curr_proc(curr_id), acks_per_proc(processes.size())
+:m_procs(processes), curr_proc(curr_id), acks_per_proc(processes.size()), delivered(processes.size())
 {
     for(auto & p: m_procs) {
             init_socket(p);
@@ -96,7 +96,6 @@ int Protocol::broadcast() {
 int UDP::send(Message *message) {
     auto *p = m_procs[message->did];
 
-    cout << "Sending to socket : [" << p->socket << "] message : ["<< message->payload << "]" <<  endl;
     int er = sendto(m_procs[curr_proc]->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << message << endl;
@@ -117,7 +116,9 @@ Message* UDP::rcv(Message *upper_m) {
     int er = recvfrom(sockfd, msg_buf, len, MSG_DONTWAIT, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
-        return new Message(-1,-1,"",1, false);
+        auto* m = new Message(-1,-1,"",1, false);
+        m->discard = true;
+        return m;
     }
 
     Message* m;
@@ -144,6 +145,7 @@ Message* UDP::rcv(Message *upper_m) {
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
         m = new Message(-1,-1,"",0, false);
+        m->discard = true;
     }
 
     return m;
@@ -157,44 +159,35 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
 
 int StubbornLinks::send(Message *m) {
 
-    cout << "Sending " << *m << endl;
     // message is never ack so payload is always the seq number
     int seqNum = stringToInt(m->payload);
-    cout << "Sending continued" << endl;
     while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), seqNum ) == acks_per_proc[m->did].end()) {
-        cerr << "Size: " << acks_per_proc[m->did].size() << endl;
         UDP::send(m);
-        //delete ack
     }
-    cout << "Stopped sending message : [" << m << "]" << endl;
+    //delete ack
+    acks_per_proc[m->did].erase(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), seqNum ));
 }
 
 Message* StubbornLinks::rcv(Message *m_) {
 
     Message* m = UDP::rcv(NULL);
-    if(m->sid == -1) {
+    if(m->discard) {
         //Discard message
         return m;
     }
 
-    cout << "Received :" << *m << endl;
-
     if(m->ack) {
-        cout << "Got ack" << endl;
         // payload is of format "ack #"
         string seq = m->payload.substr(3);
         int seqNum = stringToInt(seq);
-        cout << "Ack : [" << seqNum <<"]" <<  endl;
-        acks_per_proc[m->sid].push_back(seqNum);
-        cout << "Value in ack continer" << acks_per_proc[m->sid][0] << endl;
+        acks_per_proc[m->sid].insert(seqNum);
         // discard message
-        cout << "Message discarded" << endl;
+        m->discard = true;
         return m;
     } else {
         // send ack
         auto* ackMess = new Message(m->did, m->sid, "ack " + m->payload, m->payload.size() + 4, true);
         UDP::send(ackMess);
-        cout << "Sent ack :" << *ackMess << endl;
         delete ackMess;
         return m;
     }
@@ -211,15 +204,20 @@ int PerfectLinks::send(Message *message) {
 }
 
 Message* PerfectLinks::rcv(Message *message) {
-    vector<Message*>::iterator it;
-    for (it = delivered.begin(); it != delivered.end(); ++it) {
-        if((*it) == message) {
-            delivered.push_back(message);
-            StubbornLinks::rcv(message);
-            return message;
+
+    auto* m = StubbornLinks::rcv(nullptr);
+
+    if(!m->discard) {
+        int seq = stringToInt(m->payload);
+        auto found = find(delivered[m->sid].begin(), delivered[m->sid].end(), seq );
+        if(found == delivered[m->sid].end()) {
+            delivered[m->sid].insert(seq);
+            return m;
+        } else {
+            //discard
+            m->discard = -1;
         }
     }
-    Message alreadyDeliveredMessage = Message(-1, -1, " ", 0, false);
-    Message* alreadyDeliveredMessagePointer = &alreadyDeliveredMessage;
-    return alreadyDeliveredMessagePointer;
+
+    return m;
 }

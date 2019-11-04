@@ -34,20 +34,17 @@ static void stop(int signum) {
 }
 
 void *send(void* arg) {
-
     cout << "Start sending" << endl;
-    auto* prot = (StubbornLinks*) arg;
+    auto* prot = (PerfectLinks*) arg;
     prot->broadcast();
-
 }
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void *rcv(void * arg) {
 
-    auto *prot = (StubbornLinks *) arg;
+    auto *prot = (PerfectLinks *) arg;
     vector<vector<string>> logBuffer;
-    cout << prot->curr_proc << endl;
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " <<sock << endl;
 
@@ -55,18 +52,20 @@ void *rcv(void * arg) {
     while(1) {
         Message* rcvMessage = prot->rcv(NULL);
 
-        if (rcvMessage->sid == -1 or rcvMessage->ack) {
+        if (rcvMessage->discard) {
             //discard
+            delete rcvMessage;
             continue;
         }
         // write to log
-        vector<string> newLog = {"d", to_string(rcvMessage->sid), rcvMessage->payload};
+        vector<string> newLog = {"d", to_string(rcvMessage->sid + 1), rcvMessage->payload};
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
     }
+
 
 }
 #pragma clang diagnostic pop
@@ -93,7 +92,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new StubbornLinks(mProcs, curr_id - 1);
+    auto *prot = new PerfectLinks(mProcs, curr_id - 1);
 
 
     pthread_t t1, t2;

@@ -35,6 +35,7 @@ public:
     string payload;
     size_t size;
     bool ack = false;
+    bool discard = false;
 
 public:
     Message(int sid, int did, string payload, size_t size, bool ack);
