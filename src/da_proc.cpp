@@ -58,11 +58,10 @@ void *rcv(void * arg) {
 
         if (rcvMessage->discard) {
             //discard
-            delete rcvMessage;
             continue;
         }
         // write to log
-        vector<string> newLog = {"d", to_string(rcvMessage->sid + 1), rcvMessage->payload};
+        vector<string> newLog = {"d", to_string(rcvMessage->os + 1), to_string(rcvMessage->seqNum)};
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);

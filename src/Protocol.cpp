@@ -15,6 +15,7 @@
 
 vector<vector<string>> logBuffer;
 
+
 #define ACK "ack"
 
 void Protocol::init_socket(process* proc) {
@@ -73,10 +74,10 @@ UDP::UDP(vector<process*> &procs, int id, int m)
 {}
 
 int Protocol::broadcast() {
-    string payload = to_string(seqNum);
+    string payload = to_string(seqNum) + " "+ to_string(curr_proc);
     for(auto p : m_procs) {
         if(p->id!= curr_proc) {
-            auto* m = new Message(curr_proc, p->id, payload, payload.size(), false);
+            auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
             send(m);
         }
     }
@@ -101,6 +102,18 @@ int UDP::send(Message *message) {
     return er;
 }
 
+vector<string> split(const std::string& s, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter))
+    {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
 Message* UDP::rcv(Message *upper_m) {
     int sockfd = m_procs[curr_proc]->socket;
     struct sockaddr_in peer_addr;
@@ -114,7 +127,7 @@ Message* UDP::rcv(Message *upper_m) {
     int er = recvfrom(sockfd, msg_buf, len, MSG_DONTWAIT, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
-        auto* m = new Message(-1,-1,"",1, false);
+        auto* m = new Message(-1,-1,false, -1, -1);
         m->discard = true;
         return m;
     }
@@ -133,16 +146,24 @@ Message* UDP::rcv(Message *upper_m) {
         }
 
         string payload = string(msg_buf);
+        auto tokens = split(payload,' ');
         bool ack = false;
+        int os = -1;
+        int seq = -1;
         if (payload.find(ACK) != std::string::npos) {
             // message is ack message
             ack = true;
+            os = stringToInt(tokens[2]);
+            seq = stringToInt(tokens[1]);
+        } else {
+            os = stringToInt(tokens[1]);
+            seq = stringToInt(tokens[0]);
         }
 
-        m = new Message(idSource,curr_proc,string(msg_buf),string(msg_buf).size(), ack);
+        m = new Message(idSource,curr_proc, ack, os, seq);
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-        m = new Message(-1,-1,"",0, false);
+        m = new Message(-1,-1,false, -1, -1);
         m->discard = true;
     }
 
@@ -186,7 +207,7 @@ Message* StubbornLinks::rcv(Message *m_) {
         return m;
     } else {
         // send ack
-        auto* ackMess = new Message(m->did, m->sid, "ack " + m->payload, m->payload.size() + 4, true);
+        auto* ackMess = new Message(m->did, m->sid,  true, m->os, m->seqNum);
         UDP::send(ackMess);
         delete ackMess;
         return m;

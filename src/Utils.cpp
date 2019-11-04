@@ -7,12 +7,19 @@
 
 #include "Utils.h"
 
-Message::Message(int sid, int did, string payload, size_t size, bool ack) {
+Message::Message(int sid, int did, bool ack, int os, int seqNum) {
     this->sid = sid;
     this->did = did;
-    this->payload = std::move(payload);
-    this->size = size;
     this->ack = ack;
+    string payload_;
+    if(ack) {
+        payload_ = "ack ";
+    }
+    payload_ += to_string(seqNum) + " "+ to_string(os);
+    this->payload = std::move(payload_);
+    this->size = this->payload.size();
+    this->os = os;
+    this->seqNum = seqNum;
 }
 
 int stringToInt(string stringToConvert) {

@@ -32,16 +32,18 @@ class Message{
 public:
     int sid;
     int did;
+    int os;  //original sender
+    int seqNum;
     string payload;
     size_t size;
     bool ack = false;
     bool discard = false;
 
 public:
-    Message(int sid, int did, string payload, size_t size, bool ack);
+    Message(int sid, int did, bool ack, int os, int seqNum);
 
     bool operator==(Message const& other) const {
-        return this->sid == other.sid
+        return this->os == other.os
             && this->payload == other.payload;
     }
 };
