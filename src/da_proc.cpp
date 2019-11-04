@@ -36,7 +36,11 @@ static void stop(int signum) {
 void *send(void* arg) {
     cout << "Start sending" << endl;
     auto* prot = (PerfectLinks*) arg;
-    prot->broadcast();
+    for(int i = 0; i < prot->numMess; i++) {
+        prot->broadcast();
+    }
+    cout << "Broadcast done (m=" << prot->numMess << ")" << endl;
+
 }
 
 #pragma clang diagnostic push
@@ -85,14 +89,16 @@ int main(int argc, char** argv) {
     //int curr_id = atoi(argv[1]);
 
     int curr_id = 1;
+    int m = 1;
     if(argc != 1) {
         curr_id = atoi(argv[1]);
         filename = string(argv[2]);
+        m = atoi(argv[3]);
     }
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new PerfectLinks(mProcs, curr_id - 1);
+    auto *prot = new PerfectLinks(mProcs, curr_id - 1, m);
 
 
     pthread_t t1, t2;

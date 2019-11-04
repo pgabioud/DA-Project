@@ -45,8 +45,8 @@ void Protocol::init_socket(process* proc) {
     proc->socket = fd;
 }
 
-Protocol::Protocol(vector<process*> &processes, int curr_id)
-:m_procs(processes), curr_proc(curr_id), acks_per_proc(processes.size()), delivered(processes.size())
+Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
+:m_procs(processes), curr_proc(curr_id), acks_per_proc(processes.size()), delivered(processes.size()), numMess(m)
 {
     for(auto & p: m_procs) {
             init_socket(p);
@@ -68,17 +68,16 @@ Protocol::Protocol(vector<process*> &processes, int curr_id)
 
 }
 
-UDP::UDP(vector<process*> &procs, int id)
-:Protocol(procs, id)
+UDP::UDP(vector<process*> &procs, int id, int m)
+:Protocol(procs, id, m)
 {}
 
 int Protocol::broadcast() {
-    //string m = to_string(curr_proc + 1) + " " + to_string(seqNum);
-    string m = to_string(seqNum);
+    string payload = to_string(seqNum);
     for(auto p : m_procs) {
         if(p->id!= curr_proc) {
-            Message message = Message(curr_proc, p->id, m, m.size(), false);
-            send(&message);
+            auto* m = new Message(curr_proc, p->id, payload, payload.size(), false);
+            send(m);
         }
     }
     string seqNumb = to_string(seqNum);
@@ -89,7 +88,6 @@ int Protocol::broadcast() {
         logBuffer.clear();
     }
 
-    cout << "Broadcast done" << endl;
     seqNum++;
 }
 
@@ -148,13 +146,15 @@ Message* UDP::rcv(Message *upper_m) {
         m->discard = true;
     }
 
+    bzero(msg_buf,strlen(msg_buf));
+
     return m;
 }
 
 
 //Stubborn Links Modules
-StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
-:UDP(procs, id)
+StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
+:UDP(procs, id, m)
 {}
 
 int StubbornLinks::send(Message *m) {
@@ -195,8 +195,8 @@ Message* StubbornLinks::rcv(Message *m_) {
 
 
 //Perfect Links Module
-PerfectLinks::PerfectLinks(vector<process *> &procs, int id)
-:StubbornLinks(procs, id)
+PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
+:StubbornLinks(procs, id, m)
 {}
 
 int PerfectLinks::send(Message *message) {

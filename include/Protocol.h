@@ -21,9 +21,10 @@ public:
     int seqNum;
     string log;
     int sizeBuffer = 10;
+    int numMess = 1;
 
 public:
-    Protocol(vector<process*> & processes, int curr_id);
+    Protocol(vector<process*> & processes, int curr_id, int m);
 
     virtual int send(Message *message) = 0;
     virtual Message* rcv(Message *message) = 0;
@@ -42,7 +43,7 @@ public:
 class UDP: public Protocol {
 
 public:
-    UDP(vector<process*> & processes, int curr_id);
+    UDP(vector<process*> & processes, int curr_id,int m);
 
     int send(Message *message);
     Message* rcv(Message *message);
@@ -51,7 +52,7 @@ public:
 class StubbornLinks : public UDP {
 
 public:
-    StubbornLinks(vector<process*> & processes, int curr_id);
+    StubbornLinks(vector<process*> & processes, int curr_id,int m);
 
     int send(Message *message);
     Message* rcv(Message *message);
@@ -64,7 +65,7 @@ private:
 class PerfectLinks : public StubbornLinks {
 
 public:
-    PerfectLinks(vector<process*> & processes, int curr_id);
+    PerfectLinks(vector<process*> & processes, int curr_id, int m);
 
     int send(Message *message);
     Message* rcv(Message *message);
