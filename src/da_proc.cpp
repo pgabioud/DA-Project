@@ -34,8 +34,9 @@ static void stop(int signum) {
 }
 
 void *send(void* arg) {
+
     cout << "Start sending" << endl;
-    UDP* prot = (UDP*) arg;
+    auto* prot = (StubbornLinks*) arg;
     prot->broadcast();
 
 }
@@ -43,8 +44,10 @@ void *send(void* arg) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void *rcv(void * arg) {
-    UDP *prot = (UDP *) arg;
+
+    auto *prot = (StubbornLinks *) arg;
     vector<vector<string>> logBuffer;
+    cout << prot->curr_proc << endl;
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " <<sock << endl;
 
@@ -52,7 +55,8 @@ void *rcv(void * arg) {
     while(1) {
         Message* rcvMessage = prot->rcv(NULL);
 
-        if (rcvMessage->sid == -1) {
+        if (rcvMessage->sid == -1 or rcvMessage->ack) {
+            //discard
             continue;
         }
         // write to log
@@ -63,6 +67,7 @@ void *rcv(void * arg) {
             logBuffer.clear();
         }
     }
+
 }
 #pragma clang diagnostic pop
 
@@ -88,7 +93,8 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    UDP *prot = new UDP(mProcs, curr_id);
+    auto *prot = new StubbornLinks(mProcs, curr_id - 1);
+
 
     pthread_t t1, t2;
     //start listening for incoming UDP packets

@@ -33,7 +33,7 @@ void Protocol::init_socket(process* proc) {
     addr->sin_addr.s_addr = inet_addr(m_addr.c_str());
     addr->sin_port = htons(port);
 
-    if(curr_proc + 1== proc->id) {
+    if(curr_proc == proc->id) {
         if (bind(fd, (struct sockaddr *) addr, sizeof(*addr)) < 0) {
             perror("bind");
             exit(1);
@@ -46,9 +46,8 @@ void Protocol::init_socket(process* proc) {
 }
 
 Protocol::Protocol(vector<process*> &processes, int curr_id)
-:m_procs(processes), curr_proc(curr_id - 1)
+:m_procs(processes), curr_proc(curr_id), acks_per_proc(processes.size())
 {
-
     for(auto & p: m_procs) {
             init_socket(p);
     }
@@ -60,11 +59,13 @@ Protocol::Protocol(vector<process*> &processes, int curr_id)
     //init variables
     seqNum = 1;
     stringstream ss;
-    ss << "da_proc_" << curr_id << ".out" <<  endl;
+    ss << "da_proc_" << curr_id + 1 << ".out";
     log = ss.str();
+    // reset log
     ofstream ofs;
     ofs.open(log, std::ofstream::out | std::ofstream::trunc);
     ofs.close();
+
 }
 
 UDP::UDP(vector<process*> &procs, int id)
@@ -75,8 +76,8 @@ int Protocol::broadcast() {
     //string m = to_string(curr_proc + 1) + " " + to_string(seqNum);
     string m = to_string(seqNum);
     for(auto p : m_procs) {
-        if(p->id!= curr_proc + 1) {
-            Message message = Message(curr_proc, p->id - 1, m, m.size(), false);
+        if(p->id!= curr_proc) {
+            Message message = Message(curr_proc, p->id, m, m.size(), false);
             send(&message);
         }
     }
@@ -140,8 +141,6 @@ Message* UDP::rcv(Message *upper_m) {
         }
 
         m = new Message(idSource,curr_proc,string(msg_buf),string(msg_buf).size(), ack);
-
-        cout << "Received :" << *m << endl;
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
         m = new Message(-1,-1,"",0, false);
@@ -158,30 +157,44 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
 
 int StubbornLinks::send(Message *m) {
 
+    cout << "Sending " << *m << endl;
     // message is never ack so payload is always the seq number
-    vector<int> curr_acks = acks_per_proc[m->did];
     int seqNum = stringToInt(m->payload);
-    while(find(curr_acks.begin(), curr_acks.end(), seqNum ) == curr_acks.end()) {
+    cout << "Sending continued" << endl;
+    while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), seqNum ) == acks_per_proc[m->did].end()) {
+        cerr << "Size: " << acks_per_proc[m->did].size() << endl;
         UDP::send(m);
+        //delete ack
     }
     cout << "Stopped sending message : [" << m << "]" << endl;
 }
 
-Message* StubbornLinks::rcv(Message *m) {
+Message* StubbornLinks::rcv(Message *m_) {
 
-    m = UDP::rcv(NULL);
+    Message* m = UDP::rcv(NULL);
+    if(m->sid == -1) {
+        //Discard message
+        return m;
+    }
+
+    cout << "Received :" << *m << endl;
 
     if(m->ack) {
+        cout << "Got ack" << endl;
         // payload is of format "ack #"
         string seq = m->payload.substr(3);
         int seqNum = stringToInt(seq);
+        cout << "Ack : [" << seqNum <<"]" <<  endl;
         acks_per_proc[m->sid].push_back(seqNum);
-        cout << acks_per_proc[m->sid][0] << endl;
+        cout << "Value in ack continer" << acks_per_proc[m->sid][0] << endl;
         // discard message
+        cout << "Message discarded" << endl;
+        return m;
     } else {
         // send ack
-        auto* ackMess = new Message(m->sid, m->did, "ack " + m->payload, m->payload.size() + 4, true);
+        auto* ackMess = new Message(m->did, m->sid, "ack " + m->payload, m->payload.size() + 4, true);
         UDP::send(ackMess);
+        cout << "Sent ack :" << *ackMess << endl;
         delete ackMess;
         return m;
     }

@@ -46,7 +46,7 @@ public:
 };
 
 inline ostream& operator<<(ostream& os, const Message& m) {
-    return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did + 1<< ", payload: " << m.payload
+    return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did<< ", payload: " << m.payload
         << ", size: " << m.size << ", ack : "<< m.ack<< ")";
 }
 

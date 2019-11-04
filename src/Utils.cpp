@@ -57,7 +57,7 @@ vector<process*> parser(string fileToParse) {
                                                 istream_iterator<string>());
 
             processVector.push_back(new(process));
-            processVector[countIp-1]->id = countIp;
+            processVector[countIp-1]->id = countIp - 1;
             processVector[countIp-1]->ip = parsedLine[0];
 
             int port = stringToInt(parsedLine[1]);
