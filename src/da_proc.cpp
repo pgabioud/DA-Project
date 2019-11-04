@@ -56,7 +56,7 @@ void *rcv(void * arg) {
             continue;
         }
         // write to log
-        vector<string> newLog = {"d", to_string(rcvMessage->sid + 1), rcvMessage->payload};
+        vector<string> newLog = {"d", to_string(rcvMessage->sid), rcvMessage->payload};
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);

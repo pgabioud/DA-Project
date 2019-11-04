@@ -73,7 +73,7 @@ UDP::UDP(vector<process*> &procs, int id)
 
 int Protocol::broadcast() {
     //string m = to_string(curr_proc + 1) + " " + to_string(seqNum);
-    string m = "ack " + to_string(seqNum);
+    string m = to_string(seqNum);
     for(auto p : m_procs) {
         if(p->id!= curr_proc + 1) {
             Message message = Message(curr_proc, p->id - 1, m, m.size(), false);
@@ -96,7 +96,7 @@ int UDP::send(Message *message) {
     auto *p = m_procs[message->did];
 
     cout << "Sending to socket : [" << p->socket << "] message : ["<< message->payload << "]" <<  endl;
-    int er = sendto(p->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    int er = sendto(m_procs[curr_proc]->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << message << endl;
     }
@@ -122,13 +122,13 @@ Message* UDP::rcv(Message *upper_m) {
     Message* m;
 
     int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-    cout << peer_addr.sin_port << endl;
+    int port =  ntohs(peer_addr.sin_port) ;
     if (s == 0) {
         int idSource = -1;
 
         for(auto p:m_procs) {
-            if(p->addrinfo == &peer_addr) {
-                cout << "Found match" << endl;
+            if(p->port == port) {
+                idSource = p->id;
             }
         }
 
@@ -159,7 +159,7 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id)
 int StubbornLinks::send(Message *m) {
 
     // message is never ack so payload is always the seq number
-    vector<int> curr_acks = acks_per_proc[m->sid];
+    vector<int> curr_acks = acks_per_proc[m->did];
     int seqNum = stringToInt(m->payload);
     while(find(curr_acks.begin(), curr_acks.end(), seqNum ) == curr_acks.end()) {
         UDP::send(m);
