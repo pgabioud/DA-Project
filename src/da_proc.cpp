@@ -13,6 +13,7 @@
 #define MAXCHARS 255
 
 static int wait_for_start = 1;
+string log;
 
 static void start(int signum) {
     wait_for_start = 0;
@@ -28,6 +29,8 @@ static void stop(int signum) {
 
     //write/flush output file if necessary
     printf("Writing output.\n");
+    writeLogs(log, &logBuffer);
+    logBuffer.clear();
 
     //exit directly from signal handler
     exit(0);
@@ -48,7 +51,6 @@ void *send(void* arg) {
 void *rcv(void * arg) {
 
     auto *prot = (PerfectLinks *) arg;
-    vector<vector<string>> logBuffer;
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " <<sock << endl;
 
@@ -63,7 +65,7 @@ void *rcv(void * arg) {
         // write to log
         vector<string> newLog = {"d", to_string(rcvMessage->os + 1), to_string(rcvMessage->seqNum)};
         logBuffer.push_back(newLog);
-        if (logBuffer.size() <= prot->sizeBuffer) {
+        if (logBuffer.size() >= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
@@ -79,7 +81,6 @@ int main(int argc, char** argv) {
     signal(SIGUSR2, start);
     signal(SIGTERM, stop);
     signal(SIGINT, stop);
-
 
     printf("Initializing.\n");
 
@@ -98,7 +99,7 @@ int main(int argc, char** argv) {
 
     vector<process*> mProcs = parser(filename);
     auto *prot = new PerfectLinks(mProcs, curr_id - 1, m);
-
+    log = prot->log;
 
     pthread_t t1, t2;
     //start listening for incoming UDP packets

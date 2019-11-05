@@ -13,9 +13,6 @@
 #include <fstream>
 #include "Protocol.h"
 
-vector<vector<string>> logBuffer;
-
-
 #define ACK "ack"
 
 void Protocol::init_socket(process* proc) {
@@ -81,7 +78,13 @@ int Protocol::broadcast() {
     for(auto p : m_procs) {
         if(p->id!= curr_proc) {
             auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
-            send(m);
+            pthread_t t;
+            auto* args = (send_args*)malloc(sizeof(send_args));
+            args->prot = this;
+            args->m = m;
+            args->did = p->id;
+            pthread_create(&t, NULL, &broadcast_to_p, (void *) args);
+            threads.push_back(t);
         }
     }
     string seqNumb = to_string(seqNum);
@@ -237,10 +240,26 @@ int PerfectLinks::send(Message *message) {
     StubbornLinks::send(message);
 }
 
-void *single_rebroadcast(void* arg) {
+void *single_send(void* arg) {
     auto* args = (send_args*)arg;
 
     args->prot->send(args->m);
+
+}
+
+void *broadcast_to_p(void* arg) {
+    auto* args = (send_args*)arg;
+    int seq=0;
+    Protocol* prot = args->prot;
+    int did= args->did;
+
+    for(int i=0; i < prot->numMess; i++) {
+        seq++;
+        auto* m = new Message(prot->curr_proc,did,false,prot->curr_proc,seq);
+        args->prot->send(args->m);
+    }
+
+    //cout << "Sent to p" << did << endl;
 
 }
 
@@ -250,13 +269,14 @@ Message* PerfectLinks::rcv(Message *message) {
 
     if(!m->discard) {
         string pload = m->payload;
+        //cout << "Received from ["<< m->sid << " [" << pload << "]" << endl;
         auto found = find(delivered[m->sid].begin(), delivered[m->sid].end(), pload );
         if(found == delivered[m->sid].end()) {
             // did not find
             delivered[m->sid].insert(pload);
             seen.insert(pload);
             auto sfound = find(seen.begin(), seen.end(), pload );
-            if(sfound != seen.end()) {
+            if(sfound == seen.end()) {
                 // only rebroadcast if we have not yet seen this message, do not rebroadcast twice
                 for(auto p : m_procs) {
                     if(p->id!= curr_proc) {
@@ -265,7 +285,8 @@ Message* PerfectLinks::rcv(Message *message) {
                         auto* args = (send_args*)malloc(sizeof(send_args));
                         args->prot = this;
                         args->m = rm;
-                        pthread_create(&t, NULL, &single_rebroadcast, (void *) args);
+                        args->did = m->did;
+                        pthread_create(&t, NULL, &single_send, (void *) args);
                         threads.push_back(t);
                     }
                 }

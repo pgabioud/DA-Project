@@ -12,6 +12,12 @@
 
 using namespace std;
 
+static vector<vector<string>> logBuffer;
+
+void* single_send(void* args);
+
+void* broadcast_to_p(void* args);
+
 class Protocol {
 
 public:
@@ -20,7 +26,7 @@ public:
     char * rcv_buffer;
     int seqNum;
     string log;
-    int sizeBuffer = 10;
+    int sizeBuffer = 50;
     int numMess = 1;
 
 public:
@@ -74,8 +80,9 @@ public:
 };
 
 typedef struct{
-    PerfectLinks* prot;
+    Protocol* prot;
     Message* m;
+    int did;
 }send_args;
 
 #endif //PROJECT_PROTOCOL_H

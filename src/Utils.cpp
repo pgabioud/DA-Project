@@ -76,6 +76,7 @@ vector<process*> parser(string fileToParse) {
         }
 
         // Parsing Process Affectation
+        /*
         int countBroad = 0;
         vector<vector<int>> processAffectation(nbProcess);
         while (countBroad < nbProcess) {
@@ -102,6 +103,7 @@ vector<process*> parser(string fileToParse) {
                 processVector[intId-1]->affectedProcess.push_back(countBroad);
             }
         }
+         */
         file.close();
     } else {
         throw string("##### error when trying to open the Membership file for parsing #####");
