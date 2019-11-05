@@ -58,6 +58,9 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     }
 
     //init variables
+    //init vectors
+    seen = set<string>();
+    threads = vector<pthread_t>();
     seqNum = 1;
     stringstream ss;
     ss << "da_proc_" << curr_id + 1 << ".out";
@@ -146,6 +149,7 @@ Message* UDP::rcv(Message *upper_m) {
         }
 
         string payload = string(msg_buf);
+        //cout << "FL Received : [" << payload << "]" << endl;
         auto tokens = split(payload,' ');
         bool ack = false;
         int os = -1;
@@ -181,27 +185,35 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
 int StubbornLinks::send(Message *m) {
 
     // message is never ack so payload is always the seq number
-    int seqNum = stringToInt(m->payload);
-    while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), seqNum ) == acks_per_proc[m->did].end()) {
+    string pload(m->payload);
+    //cout << "Sending : [" << pload << "]" << endl;
+    while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end()) {
         UDP::send(m);
     }
+    //cout << "Done Sending : [" << pload << "]" << endl;
+
     //delete ack
-    acks_per_proc[m->did].erase(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), seqNum ));
+    //acks_per_proc[m->did].erase(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ));
+
 }
 
 Message* StubbornLinks::rcv(Message *m_) {
 
     Message* m = UDP::rcv(NULL);
+    /*if(m->sid == 0 or m->sid == 1 ) {
+        cout << "SL Received : [" << m->payload << "]" << endl;
+    }
+*/
     if(m->discard) {
         //Discard message
         return m;
     }
 
     if(m->ack) {
-        // payload is of format "ack #"
-        string seq = m->payload.substr(3);
-        int seqNum = stringToInt(seq);
-        acks_per_proc[m->sid].insert(seqNum);
+        // payload is of format "ack # #"
+        string pload = m->payload.substr(4);
+        //cout << "Got ack : [" << pload << "]" << endl;
+        acks_per_proc[m->sid].insert(pload);
         // discard message
         m->discard = true;
         return m;
@@ -209,6 +221,7 @@ Message* StubbornLinks::rcv(Message *m_) {
         // send ack
         auto* ackMess = new Message(m->did, m->sid,  true, m->os, m->seqNum);
         UDP::send(ackMess);
+        //cout << "SL Sent ack : ["<< ackMess->payload << "]" << endl;
         delete ackMess;
         return m;
     }
@@ -224,19 +237,44 @@ int PerfectLinks::send(Message *message) {
     StubbornLinks::send(message);
 }
 
+void *single_rebroadcast(void* arg) {
+    auto* args = (send_args*)arg;
+
+    args->prot->send(args->m);
+
+}
+
 Message* PerfectLinks::rcv(Message *message) {
 
     auto* m = StubbornLinks::rcv(nullptr);
 
     if(!m->discard) {
-        int seq = stringToInt(m->payload);
-        auto found = find(delivered[m->sid].begin(), delivered[m->sid].end(), seq );
+        string pload = m->payload;
+        auto found = find(delivered[m->sid].begin(), delivered[m->sid].end(), pload );
         if(found == delivered[m->sid].end()) {
-            delivered[m->sid].insert(seq);
+            // did not find
+            delivered[m->sid].insert(pload);
+            seen.insert(pload);
+            auto sfound = find(seen.begin(), seen.end(), pload );
+            if(sfound != seen.end()) {
+                // only rebroadcast if we have not yet seen this message, do not rebroadcast twice
+                for(auto p : m_procs) {
+                    if(p->id!= curr_proc) {
+                        pthread_t t;
+                        auto* rm = new Message(curr_proc,p->id,false,m->os,m->seqNum);
+                        auto* args = (send_args*)malloc(sizeof(send_args));
+                        args->prot = this;
+                        args->m = rm;
+                        pthread_create(&t, NULL, &single_rebroadcast, (void *) args);
+                        threads.push_back(t);
+                    }
+                }
+
+            }
             return m;
         } else {
             //discard
-            m->discard = -1;
+            m->discard = true;
         }
     }
 

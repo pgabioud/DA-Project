@@ -32,11 +32,13 @@ public:
     void init_socket(process* proc) ;
 
     int broadcast();
-
+protected:
+    vector<pthread_t> threads;
 public:
     //Need for perfect links
-    vector<set<int>> delivered;
-    vector<set<int>> acks_per_proc;
+    vector<set<string>> delivered;
+    vector<set<string>> acks_per_proc;
+    set<string> seen;
 
 };
 
@@ -71,5 +73,9 @@ public:
     Message* rcv(Message *message);
 };
 
+typedef struct{
+    PerfectLinks* prot;
+    Message* m;
+}send_args;
 
 #endif //PROJECT_PROTOCOL_H
