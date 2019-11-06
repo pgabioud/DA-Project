@@ -15,6 +15,9 @@
 
 #define ACK "ack"
 
+void* work(void* arg);
+
+
 void Protocol::init_socket(process* proc) {
     int port = proc->port;
     string m_addr = proc->ip;
@@ -68,14 +71,57 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     ofs.open(log, std::ofstream::out | std::ofstream::trunc);
     ofs.close();
 
+    // create thread for working
+    int i;
+    pthread_t t;
+    pthread_create(&t, NULL, &work, (void*)this);
+
 }
 
 Protocol::~Protocol()
-{}
+{
+
+
+}
 
 UDP::UDP(vector<process*> &procs, int id, int m)
 :Protocol(procs, id, m)
 {}
+
+void* send_thread(void* arg) {
+    auto* args = (send_args*)arg;
+
+    Protocol* prot = args->prot;
+    int er = -1;
+    er = prot->send(args->m);
+    *((int*)arg) = er;
+    return arg;
+}
+
+void* work(void* arg) {
+    auto* prot = (Protocol*)arg;
+
+    while(true) {
+        if(!prot->work_queue.empty()) {
+
+            Message* m = prot->work_queue.front();
+            prot->work_queue.pop();
+
+            //create thread for sending
+            auto *args = (send_args *) malloc(sizeof(send_args));
+            args->prot = prot;
+            args->m = m;
+            pthread_t t;
+            pthread_create(&t, NULL, &send_thread, (void *) args);
+
+            void* status;
+            pthread_join(t,&status);
+
+            auto er = *((int*)status);
+
+        }
+    }
+}
 
 UDP::~UDP()
 {}
@@ -85,22 +131,11 @@ int Protocol::broadcast() {
     for(auto& p : m_procs) {
         if(p->id!= curr_proc) {
             auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
-            pthread_t t;
-            auto* args = (send_args*)malloc(sizeof(send_args));
-            args->prot = this;
-            args->m = m;
-            args->did = p->id;
-            pthread_create(&t, NULL, &broadcast_to_p, (void *) args);
-            threads.push_back(t);
+            work_queue.push(m);
+            cout << "Push " << *m << endl;
         }
     }
-    string seqNumb = to_string(seqNum);
-    vector<string> newLog = {"b", seqNumb};
-    logBuffer.push_back(newLog);
-    if(logBuffer.size() <= sizeBuffer) {
-        writeLogs(log, &logBuffer);
-        logBuffer.clear();
-    }
+
 
     seqNum++;
 }
@@ -201,9 +236,18 @@ int StubbornLinks::send(Message *m) {
     // message is never ack so payload is always the seq number
     string pload(m->payload);
     //cout << "Sending : [" << pload << "]" << endl;
-    while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end()) {
-        UDP::send(m);
+    int stry = 1;
+    int er = -1;
+    while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end() and stry < max_try) {
+        er = UDP::send(m);
+        stry++;
     }
+
+    if(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end()) {
+        work_queue.push(m);
+    }
+
+    return er;
     //cout << "Done Sending : [" << pload << "]" << endl;
 
     //delete ack
@@ -249,7 +293,7 @@ PerfectLinks::~PerfectLinks()
 }
 
 int PerfectLinks::send(Message *message) {
-    StubbornLinks::send(message);
+    return StubbornLinks::send(message);
 }
 
 void *single_send(void* arg) {
@@ -294,15 +338,9 @@ Message* PerfectLinks::rcv(Message *message) {
                 if(!m->ack) {
                     for (auto& p : m_procs) {
                         if (p->id != curr_proc) {
-                            pthread_t t;
+
                             auto *rm = new Message(curr_proc, p->id, false, m->os, m->seqNum);
-                            auto *args = (pl_send_args *) malloc(sizeof(pl_send_args));
-                            args->m = rm;
-                            // we wish to send using perfect links protocol
-                            args->prot =this;
-                            args->did = m->did;
-                            pthread_create(&t, NULL, &single_send, (void *) args);
-                            threads.push_back(t);
+                            work_queue.push(rm);
                         }
                     }
                 }
@@ -335,8 +373,7 @@ Urb::~Urb()
 int Urb::send(Message *m) {
     for(auto& s : pendingMessage) {
         if(s==m->payload) {
-            PerfectLinks::send(m);
-            return 0;
+            return PerfectLinks::send(m);
         }
     }
 
@@ -351,7 +388,7 @@ int Urb::send(Message *m) {
     if(!is_delivered) {
         pendingMessage.insert(m->payload);
     }
-    PerfectLinks::send(m);
+    return PerfectLinks::send(m);
 
 
 }

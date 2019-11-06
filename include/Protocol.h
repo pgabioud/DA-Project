@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <queue>
 #include "Utils.h"
 
 using namespace std;
@@ -28,6 +29,7 @@ public:
     string log;
     int sizeBuffer = 50;
     int numMess = 1;
+    int max_try = 5;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
@@ -40,12 +42,14 @@ public:
     void init_socket(process* proc) ;
 
     int broadcast();
+
 protected:
     vector<pthread_t> threads;
 public:
     //Need for perfect links
     vector<set<string>> acks_per_proc;
     set<string> seen;
+    queue<Message*> work_queue;
 
 };
 
@@ -110,5 +114,7 @@ typedef struct{
     Message* m;
     int did;
 }send_args;
+
+
 
 #endif //PROJECT_PROTOCOL_H
