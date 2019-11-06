@@ -132,7 +132,6 @@ int Protocol::broadcast() {
         if(p->id!= curr_proc) {
             auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
             work_queue.push(m);
-            cout << "Push " << *m << endl;
         }
     }
 
@@ -402,8 +401,11 @@ Message* Urb::rcv(Message *message) {
         return m;
     }
 
+    if(m->seqNum > vectorClock[m->os].size()) {
+        vectorClock[m->os].resize(m->seqNum, 1);
+    }
+
     //receive message
-    cout << "URB receive : [" << m->payload << "]" << endl;
     vectorClock[m->os][iseq] += 1;
 
     bool is_pending = false;
@@ -432,7 +434,6 @@ Message* Urb::rcv(Message *message) {
     bool can_deliver = vectorClock[m->os][iseq] > half;
 
     if(can_deliver and is_pending and !is_delivered) {
-        cout << "URB Deliver : "<< m->payload << endl;
         pendingMessage.erase(m->payload);
         urb_delivered.insert(m->payload);
         return m;
