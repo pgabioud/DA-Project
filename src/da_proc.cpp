@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <csignal>
 #include <ctime>
-#include <sstream>
 #include <string>
 #include <iostream>
 #include <pthread.h>
