@@ -22,8 +22,8 @@ class Protocol {
 
 public:
     vector<process*> m_procs;
+    int num_procs;
     int curr_proc;
-    char * rcv_buffer;
     int seqNum;
     string log;
     int sizeBuffer = 50;
@@ -31,6 +31,8 @@ public:
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
+
+    virtual ~Protocol();
 
     virtual int send(Message *message) = 0;
     virtual Message* rcv(Message *message) = 0;
@@ -42,7 +44,6 @@ protected:
     vector<pthread_t> threads;
 public:
     //Need for perfect links
-    vector<set<string>> delivered;
     vector<set<string>> acks_per_proc;
     set<string> seen;
 
@@ -52,6 +53,7 @@ class UDP: public Protocol {
 
 public:
     UDP(vector<process*> & processes, int curr_id,int m);
+    ~UDP() override;
 
     int send(Message *message);
     Message* rcv(Message *message);
@@ -61,12 +63,11 @@ class StubbornLinks : public UDP {
 
 public:
     StubbornLinks(vector<process*> & processes, int curr_id,int m);
+    ~StubbornLinks() override;
 
     int send(Message *message);
     Message* rcv(Message *message);
 
-private:
-    double timeout = 3.0;
 };
 
 
@@ -74,10 +75,35 @@ class PerfectLinks : public StubbornLinks {
 
 public:
     PerfectLinks(vector<process*> & processes, int curr_id, int m);
+    ~PerfectLinks() override;
 
     int send(Message *message);
     Message* rcv(Message *message);
+
+    vector<set<string>> pl_delivered;
+
 };
+
+class Urb : public PerfectLinks {
+
+public:
+    Urb(vector<process*> & processes, int curr_id, int m);
+    ~Urb() override;
+
+    int send(Message *message);
+    Message * rcv (Message *message);
+
+public:
+    vector<vector<int>> vectorClock;
+    set<string> pendingMessage;
+    set<string> urb_delivered;
+};
+
+typedef struct{
+    PerfectLinks* prot;
+    Message* m;
+    int did;
+}pl_send_args;
 
 typedef struct{
     Protocol* prot;

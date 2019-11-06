@@ -29,16 +29,16 @@ static void stop(int signum) {
 
     //write/flush output file if necessary
     printf("Writing output.\n");
-    writeLogs(log, &logBuffer);
-    logBuffer.clear();
+
 
     //exit directly from signal handler
     exit(0);
 }
 
 void *send(void* arg) {
+
     cout << "Start sending" << endl;
-    auto* prot = (PerfectLinks*) arg;
+    auto* prot = (Protocol*) arg;
     for(int i = 0; i < prot->numMess; i++) {
         prot->broadcast();
     }
@@ -50,14 +50,13 @@ void *send(void* arg) {
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void *rcv(void * arg) {
 
-    auto *prot = (PerfectLinks *) arg;
+    auto *prot = (Protocol *) arg;
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " <<sock << endl;
 
     // reset buffer for receiving
     while(1) {
         Message* rcvMessage = prot->rcv(NULL);
-
         if (rcvMessage->discard) {
             //discard
             continue;
@@ -65,11 +64,12 @@ void *rcv(void * arg) {
         // write to log
         vector<string> newLog = {"d", to_string(rcvMessage->os + 1), to_string(rcvMessage->seqNum)};
         logBuffer.push_back(newLog);
-        if (logBuffer.size() >= prot->sizeBuffer) {
+        if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
     }
+
 
 
 }
@@ -86,7 +86,6 @@ int main(int argc, char** argv) {
 
     //parse arguments, including membership
     string filename = FILENAME;
-    //int curr_id = atoi(argv[1]);
 
     int curr_id = 1;
     int m = 1;
@@ -98,8 +97,9 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new PerfectLinks(mProcs, curr_id - 1, m);
-    log = prot->log;
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
+
+    cout << "Protocol initiated" << endl;
 
     pthread_t t1, t2;
     //start listening for incoming UDP packets
