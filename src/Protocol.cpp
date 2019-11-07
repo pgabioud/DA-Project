@@ -99,7 +99,7 @@ void* work(void* arg) {
 
             Message* m = prot->work_queue.front();
             prot->work_queue.pop();
-
+            cout << "Sending :" << m->payload << endl;
             prot->send(m);
         }
     }
@@ -113,9 +113,6 @@ int Protocol::broadcast() {
     for(auto& p : m_procs) {
         if(p->id!= curr_proc) {
             auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
-            while(curr_seq > seqNum) {
-                //wait
-            }
             work_queue.push(m);
         }
     }
@@ -131,16 +128,6 @@ int Protocol::broadcast() {
     seqNum++;
 }
 
-int UDP::send(Message *message) {
-    auto *p = m_procs[message->did];
-
-    int er = sendto(m_procs[curr_proc]->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
-    if(er < 0) {
-        cerr << "Error sending message : " << message << endl;
-    }
-    return er;
-}
-
 vector<string> split(const std::string& s, char delimiter)
 {
     std::vector<std::string> tokens;
@@ -152,6 +139,18 @@ vector<string> split(const std::string& s, char delimiter)
     }
     return tokens;
 }
+
+int UDP::send(Message *message) {
+    auto *p = m_procs[message->did];
+
+    int er = sendto(m_procs[curr_proc]->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    if(er < 0) {
+        cerr << "Error sending message : " << message << endl;
+    }
+    delete message;
+    return er;
+}
+
 
 Message* UDP::rcv(Message *upper_m) {
     int sockfd = m_procs[curr_proc]->socket;
@@ -166,8 +165,7 @@ Message* UDP::rcv(Message *upper_m) {
     int er = recvfrom(sockfd, msg_buf, len, MSG_DONTWAIT, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
-        auto* m = new Message(-1,-1,false, -1, -1);
-        m->discard = true;
+        Message* m = nullptr;
         return m;
     }
 
@@ -203,8 +201,7 @@ Message* UDP::rcv(Message *upper_m) {
         m = new Message(idSource,curr_proc, ack, os, seq);
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-        m = new Message(-1,-1,false, -1, -1);
-        m->discard = true;
+        return nullptr;
     }
 
     bzero(msg_buf,strlen(msg_buf));
@@ -228,31 +225,31 @@ int StubbornLinks::send(Message *m) {
     string pload(m->payload);
     int stry = 1;
     int er = -1;
+
     while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end() and stry < max_try) {
-        er = UDP::send(m);
+        auto * slm = new Message(m->sid, m->did, m->ack, m->os, m->seqNum);
+        er = UDP::send(slm);
         stry++;
     }
 
-    if(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end()) {
-
+    auto found = find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload );
+    if( found == acks_per_proc[m->did].end()) {
         work_queue.push(m);
+    } else {
+        acks_per_proc[m->did].erase(found);
     }
 
     return er;
-    //cout << "Done Sending : [" << pload << "]" << endl;
-
-    //delete ack
-    //acks_per_proc[m->did].erase(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ));
 
 }
 
 Message* StubbornLinks::rcv(Message *m_) {
 
     Message* m = UDP::rcv(NULL);
-    /*if(m->sid == 0 or m->sid == 1 ) {
-        cout << "SL Received : [" << m->payload << "]" << endl;
+    if(m == nullptr) {
+        return m;
     }
-*/
+
     if(m->discard) {
         //Discard message
         return m;
@@ -262,13 +259,12 @@ Message* StubbornLinks::rcv(Message *m_) {
         // payload is of format "ack # #"
         string pload = m->payload.substr(4);
         acks_per_proc[m->sid].insert(pload);
-        return m;
+        delete m;
+        return nullptr;
     } else {
         // send ack
         auto* ackMess = new Message(m->did, m->sid,  true, m->os, m->seqNum);
-        UDP::send(ackMess);
-        //cout << "SL Sent ack : ["<< ackMess->payload << "]" << endl;
-        delete ackMess;
+        work_queue.push(ackMess);
         return m;
     }
 }
@@ -292,6 +288,7 @@ int PerfectLinks::send(Message *message) {
 Message* PerfectLinks::rcv(Message *message) {
 
     auto* m = StubbornLinks::rcv(nullptr);
+
 
     if(!m->discard) {
         string pload = m->payload;

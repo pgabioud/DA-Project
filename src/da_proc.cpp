@@ -57,9 +57,8 @@ void *rcv(void * arg) {
     // reset buffer for receiving
     while(1) {
         Message* rcvMessage = prot->rcv(NULL);
-        if (rcvMessage->discard) {
+        if (rcvMessage== nullptr) {
             //discard
-
             continue;
         }
         // write to log
@@ -69,6 +68,9 @@ void *rcv(void * arg) {
             writeLogs(prot->log, &logBuffer);
             logBuffer.clear();
         }
+
+        delete rcvMessage;
+
     }
 
 
@@ -98,7 +100,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new StubbornLinks(mProcs, curr_id - 1, m);
+    auto *prot = new UDP(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 
