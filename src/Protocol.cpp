@@ -12,10 +12,13 @@
 #include <algorithm>
 #include <fstream>
 #include "Protocol.h"
+#include <mutex>
 
 #define ACK "ack"
 
 void* work(void* arg);
+
+mutex mtx;
 
 
 void Protocol::init_socket(process* proc) {
@@ -104,8 +107,10 @@ void* work(void* arg) {
     while(true) {
         if(!prot->work_queue.empty()) {
 
+            mtx.lock();
             Message* m = prot->work_queue.front();
             prot->work_queue.pop();
+            mtx.unlock();
 
             //create thread for sending
             auto *args = (send_args *) malloc(sizeof(send_args));
@@ -118,7 +123,6 @@ void* work(void* arg) {
             pthread_join(t,&status);
 
             auto er = *((int*)status);
-
         }
     }
 }
@@ -234,7 +238,6 @@ int StubbornLinks::send(Message *m) {
 
     // message is never ack so payload is always the seq number
     string pload(m->payload);
-    //cout << "Sending : [" << pload << "]" << endl;
     int stry = 1;
     int er = -1;
     while(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end() and stry < max_try) {
@@ -243,6 +246,7 @@ int StubbornLinks::send(Message *m) {
     }
 
     if(find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload ) == acks_per_proc[m->did].end()) {
+
         work_queue.push(m);
     }
 
@@ -295,28 +299,7 @@ int PerfectLinks::send(Message *message) {
     return StubbornLinks::send(message);
 }
 
-void *single_send(void* arg) {
-    auto* args = (send_args*)arg;
-    cout << "Rebroadcasting to : " << args->m->did << endl;
-    auto * pl_send = (PerfectLinks*)args->prot;
-    pl_send->send(args->m);
 
-}
-
-void *broadcast_to_p(void* arg) {
-    auto* args = (send_args*)arg;
-    int seq=0;
-    Protocol* prot = args->prot;
-    int did= args->did;
-
-    for(int i=0; i < prot->numMess; i++) {
-        seq++;
-        auto* m = new Message(prot->curr_proc,did,false,prot->curr_proc,seq);
-        args->prot->send(args->m);
-    }
-
-
-}
 
 Message* PerfectLinks::rcv(Message *message) {
 

@@ -30,6 +30,7 @@ public:
     int sizeBuffer = 50;
     int numMess = 1;
     int max_try = 5;
+    int max_send ;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
