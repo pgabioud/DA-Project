@@ -91,38 +91,16 @@ UDP::UDP(vector<process*> &procs, int id, int m)
 :Protocol(procs, id, m)
 {}
 
-void* send_thread(void* arg) {
-    auto* args = (send_args*)arg;
-
-    Protocol* prot = args->prot;
-    int er = -1;
-    er = prot->send(args->m);
-    *((int*)arg) = er;
-    return arg;
-}
-
 void* work(void* arg) {
     auto* prot = (Protocol*)arg;
 
     while(true) {
         if(!prot->work_queue.empty()) {
 
-            mtx.lock();
             Message* m = prot->work_queue.front();
             prot->work_queue.pop();
-            mtx.unlock();
 
-            //create thread for sending
-            auto *args = (send_args *) malloc(sizeof(send_args));
-            args->prot = prot;
-            args->m = m;
-            pthread_t t;
-            pthread_create(&t, NULL, &send_thread, (void *) args);
-
-            void* status;
-            pthread_join(t,&status);
-
-            auto er = *((int*)status);
+            prot->send(m);
         }
     }
 }
@@ -135,8 +113,18 @@ int Protocol::broadcast() {
     for(auto& p : m_procs) {
         if(p->id!= curr_proc) {
             auto* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
+            while(curr_seq > seqNum) {
+                //wait
+            }
             work_queue.push(m);
         }
+    }
+    // write to log
+    vector<string> newLog = {"b", to_string(seqNum) };
+    logBuffer.push_back(newLog);
+    if (logBuffer.size() <= sizeBuffer) {
+        writeLogs(log, &logBuffer);
+        logBuffer.clear();
     }
 
 

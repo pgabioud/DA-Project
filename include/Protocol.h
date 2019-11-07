@@ -31,6 +31,7 @@ public:
     int numMess = 1;
     int max_try = 5;
     int max_send ;
+    int curr_seq = 0;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);

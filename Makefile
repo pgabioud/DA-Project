@@ -1,3 +1,4 @@
+$(shell mkdir bin -p)
 INCLUDES = include
 SRC = src
 BIN = bin

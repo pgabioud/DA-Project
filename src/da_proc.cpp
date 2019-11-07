@@ -41,6 +41,7 @@ void *send(void* arg) {
     for(int i = 0; i < prot->numMess; i++) {
         prot->broadcast();
     }
+
     cout << "Broadcast done (m=" << prot->numMess << ")" << endl;
 
 }
@@ -62,8 +63,7 @@ void *rcv(void * arg) {
             continue;
         }
         // write to log
-        string c = rcvMessage->os == prot->curr_proc ? "b" : "d";
-        vector<string> newLog = {c, to_string(rcvMessage->os + 1), to_string(rcvMessage->seqNum)};
+        vector<string> newLog = {"d", to_string(rcvMessage->os + 1), to_string(rcvMessage->seqNum)};
         logBuffer.push_back(newLog);
         if (logBuffer.size() <= prot->sizeBuffer) {
             writeLogs(prot->log, &logBuffer);
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new Urb(mProcs, curr_id - 1, m);
+    auto *prot = new StubbornLinks(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 
