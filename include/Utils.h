@@ -97,4 +97,6 @@ vector<process*> parser(string fileToParse) ;
 void writeLogs(string logFileName, vector<vector<string>> * logs);
 
 
+vector<string> split(const std::string& s, char delimiter);
+
 #endif //DA_PROJECT_UTILS_H

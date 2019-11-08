@@ -15,7 +15,7 @@ Message::Message(int sid, int did, bool ack, int os, int seqNum) {
     if(ack) {
         payload_ = "ack ";
     }
-    payload_ += to_string(seqNum) + " "+ to_string(os);
+    payload_ += to_string(seqNum) + " "+ to_string(os) + " " + to_string(sid);
     this->payload = std::move(payload_);
     this->size = this->payload.size();
     this->os = os;
@@ -150,6 +150,18 @@ void writeLogs(string logFileName, vector<vector<string>> * logs) {
     } else {
         throw string("##### error when trying to open the log file when wr #####");
     }
+}
+
+vector<string> split(const std::string& s, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter))
+    {
+        tokens.push_back(token);
+    }
+    return tokens;
 }
 
 //Test parser with exMembership.txt

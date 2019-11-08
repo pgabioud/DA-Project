@@ -20,6 +20,7 @@ void* single_send(void* args);
 void* broadcast_to_p(void* args);
 
 class Protocol;
+class UDP;
 class StubbornLinks;
 class PerfectLinks;
 class Urb;
@@ -64,7 +65,7 @@ public:
     vector<set<string>> acks_per_proc;
     set<string> seen;
 
-    vector<set<int>> bmessages;
+    vector<set<string>> bmessages;
     vector<set<int>> rebroadcasts;
 
     vector<int> proc_counters;
@@ -90,7 +91,7 @@ public:
     int send(Message *message);
     void rcv(Message **message);
 
-    vector<set<int>> sl_delivered;
+    vector<set<string>> sl_delivered;
 
 };
 
@@ -104,7 +105,7 @@ public:
     int send(Message *message);
     void rcv(Message **message);
 
-    vector<set<int>> pl_delivered;
+    vector<set<string>> pl_delivered;
 
 };
 
@@ -122,8 +123,8 @@ public:
     set<string> pendingMessage;
     set<string> urb_delivered;
 
-    vector<set<int>> proc_rebroadcast_queue;
-    vector<set<int>> proc_pending;
+    vector<set<string>> proc_rebroadcast_queue;
+    vector<set<string>> proc_pending;
 };
 
 

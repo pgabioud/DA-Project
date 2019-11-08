@@ -3,6 +3,7 @@
 #include <csignal>
 #include <ctime>
 #include <string>
+#include <mutex>
 #include <iostream>
 #include <pthread.h>
 #include "Protocol.h"
@@ -39,43 +40,70 @@ mutex mtxm;
 void* work(void* arg) {
     process_send_t* tmp = (process_send_t*) arg;
     Urb* prot = tmp->p;
+    // thread speciallized in this process id
     int did = tmp->did;
     cout << "Created thread for :" << did << endl;
     while(true) {
         // attempt to broadcast
-        set<int>::iterator it = prot->bmessages[did].begin();
+        set<string>::iterator it = prot->bmessages[did].begin();
         for(unsigned long i =0; i< prot->bmessages[did].size(); i++) {
 
-            Message * m = new Message(prot->curr_proc, did, false, prot->curr_proc, *it);
+            string payload = *it;
+            auto tokens = split(payload,' ');
+            bool ack = false;
+            int os = -1;
+            int seq = -1;
+            if (payload.find("ack") != std::string::npos) {
+                // message is ack message
+                ack = true;
+                os = stringToInt(tokens[2]);
+                seq = stringToInt(tokens[1]);
+            } else {
+                os = stringToInt(tokens[1]);
+                seq = stringToInt(tokens[0]);
+            }
+            cout << "Sending " << payload << endl;
+
+            Message * m = new Message(prot->curr_proc, did, false, os, seq );
             prot->send(m);
             delete m;
             std::advance(it, 1);
         }
 
         //clean PL Layer
+
         for(auto i : prot->sl_delivered[did]) {
+
             prot->bmessages[did].erase(i);
         }
 
-        //attempt to rebroadcast to corresponding processes
-        for(int pid=0;pid< prot->num_procs; pid++) {
-            //Rebroadcast all messages seen from process pid to all remaining processes
-            for(unsigned long mid=0; mid < prot->proc_rebroadcast_queue[pid].size();mid++) {
-                for(int rpid= 0; rpid< prot->num_procs; rpid++) {
-                    if(rpid != prot->curr_proc) {
-                        Message * m = new Message(prot->curr_proc, rpid, false, pid , mid);
-                        prot->send(m);
-                        delete m;
-                    }
+        //Rebroadcast all messages seen from process pid to all remaining processes
+        for(string s : prot->proc_rebroadcast_queue[did]) {
+            for(int rpid= 0; rpid< prot->num_procs; rpid++) {
+                if(rpid != prot->curr_proc) {
+
+                    auto tokens = split(s,' ');
+                    int os = stringToInt(tokens[1]);
+                    int seq = stringToInt(tokens[0]);
+
+                    Message * m = new Message(prot->curr_proc, rpid, false, os , seq);
+                    cout << "Rebroadcasting " << m->payload;
+                    prot->send(m);
+                    delete m;
                 }
             }
         }
+
+
+
+
+
     }
 
 }
 
 void *send(void* arg) {
-    PerfectLinks* prot = (PerfectLinks*)arg;
+    Urb* prot = (Urb*)arg;
 
     for(int i=0; i < prot->num_procs; i++) {
         if(i == prot->curr_proc) {
@@ -115,7 +143,6 @@ void *rcv(void * arg) {
             continue;
         }
 
-        cout << "Delivering " << *rm << endl;
         // write to log
         vector<string> newLog = {"d", to_string(rm->os + 1), to_string(rm->seqNum)};
         logBuffer.push_back(newLog);
