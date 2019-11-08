@@ -38,13 +38,13 @@ static void stop(int signum) {
 mutex mtxm;
 void* work(void* arg) {
     process_send_t* tmp = (process_send_t*) arg;
-    Protocol* prot = tmp->p;
+    Urb* prot = tmp->p;
     int did = tmp->did;
     cout << "Created thread for :" << did << endl;
     while(true) {
         // attempt to broadcast
         set<int>::iterator it = prot->bmessages[did].begin();
-        for(int i =0; i< prot->bmessages[did].size(); i++) {
+        for(unsigned long i =0; i< prot->bmessages[did].size(); i++) {
 
             Message * m = new Message(prot->curr_proc, did, false, prot->curr_proc, *it);
             prot->send(m);
@@ -52,18 +52,30 @@ void* work(void* arg) {
             std::advance(it, 1);
         }
 
-        //clean
-        for(auto i : prot->pl_delivered[did]) {
+        //clean PL Layer
+        for(auto i : prot->sl_delivered[did]) {
             prot->bmessages[did].erase(i);
         }
 
         //attempt to rebroadcast to corresponding processes
+        for(int pid=0;pid< prot->num_procs; pid++) {
+            //Rebroadcast all messages seen from process pid to all remaining processes
+            for(unsigned long mid=0; mid < prot->proc_rebroadcast_queue[pid].size();mid++) {
+                for(int rpid= 0; rpid< prot->num_procs; rpid++) {
+                    if(rpid != prot->curr_proc) {
+                        Message * m = new Message(prot->curr_proc, rpid, false, pid , mid);
+                        prot->send(m);
+                        delete m;
+                    }
+                }
+            }
+        }
     }
 
 }
 
 void *send(void* arg) {
-    Protocol* prot = (Protocol*)arg;
+    PerfectLinks* prot = (PerfectLinks*)arg;
 
     for(int i=0; i < prot->num_procs; i++) {
         if(i == prot->curr_proc) {
@@ -143,7 +155,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new StubbornLinks(mProcs, curr_id - 1, m);
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 

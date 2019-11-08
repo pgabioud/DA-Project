@@ -84,7 +84,6 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
             bmessages[j].insert(i);
         }
     }
-    pl_delivered.resize(num_procs);
 
     // create thread for working
 
@@ -106,26 +105,6 @@ UDP::~UDP()
 {}
 
 int Protocol::broadcast() {
-    string payload = to_string(seqNum) + " "+ to_string(curr_proc);
-    for(auto& p : m_procs) {
-        if(p->id!= curr_proc) {
-            while(work_queue.size() > numMess * num_procs) {
-                //wait
-            }
-            Message* m = new Message(curr_proc, p->id, false, curr_proc, seqNum);
-            work_queue.push_back(*m);
-        }
-    }
-    // write to log
-    vector<string> newLog = {"b", to_string(seqNum) };
-    logBuffer.push_back(newLog);
-    if (logBuffer.size() <= sizeBuffer) {
-        writeLogs(log, &logBuffer);
-        logBuffer.clear();
-    }
-
-
-    seqNum++;
 }
 
 vector<string> split(const std::string& s, char delimiter)
@@ -203,14 +182,15 @@ void UDP::rcv(Message **m) {
 
     bzero(msg_buf,strlen(msg_buf));
 
-
 }
 
 
 //Stubborn Links Modules
 StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
 :UDP(procs, id, m)
-{}
+{
+    sl_delivered.resize(num_procs);
+}
 
 StubbornLinks::~StubbornLinks()
 {
@@ -234,25 +214,29 @@ void StubbornLinks::rcv(Message **m) {
         // payload is of format "ack # #"
         // original sender is me
         if((*m)->os == curr_proc) {
-
-            pl_delivered[(*m)->sid].insert((*m)->seqNum);
+            sl_delivered[(*m)->sid].insert((*m)->seqNum);
         }
         (*m)->discard = true;
+        return;
 
     } else {
         // send ack
         Message* ackMess = new Message((*m)->did, (*m)->sid,  true, (*m)->os, (*m)->seqNum);
         UDP::send(ackMess);
         delete ackMess;
-        //return m;
+        return;
     }
 }
 
 
 //Perfect Links Module
 PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
-:StubbornLinks(procs, id, m),pl_delivered(num_procs)
-{}
+:StubbornLinks(procs, id, m)
+{
+    pl_delivered.resize(num_procs);
+
+
+}
 
 PerfectLinks::~PerfectLinks()
 {
@@ -266,47 +250,24 @@ int PerfectLinks::send(Message *message) {
 
 void PerfectLinks::rcv(Message **m) {
 
-    //Message* m = StubbornLinks::rcv(nullptr);
+    StubbornLinks::rcv(m);
 
-    if(m== nullptr) {
-        //return m;
+    if((*m)== nullptr) {
+        return;
     }
-
+    int seq = (*m)->seqNum;
 
     if(!(*m)->discard) {
-        string pload((*m)->payload);
-        auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), pload );
+        auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), seq);
         if(found == pl_delivered[(*m)->sid].end()) {
             // did not find
-            pl_delivered[(*m)->sid].insert(pload);
-
-            auto sfound = find(seen.begin(), seen.end(), pload );
-            if(sfound == seen.end()) {
-                seen.insert(pload);
-                // only rebroadcast if we have not yet seen this message, do not rebroadcast twice
-                // do not rebroadcast acks
-                if(!(*m)->ack) {
-                    for (auto& p : m_procs) {
-                        if (p->id != curr_proc) {
-
-                            Message *rm = new Message(curr_proc, p->id, false, (*m)->os, (*m)->seqNum);
-                            work_queue.push_back(*rm);
-                        }
-                    }
-                }
-            }
-
+            pl_delivered[(*m)->sid].insert((*m)->seqNum);
         } else {
-            //discard
-      //      return nullptr;
+            (*m)->discard = true;
+            return;
         }
     }
 
-    if((*m)->ack) {
-       // return nullptr;
-    }
-
-    //return m;
 }
 
 
@@ -314,6 +275,8 @@ Urb::Urb(vector<process *> &procs, int id, int m)
 :PerfectLinks(procs, id,m)
 {
     vectorClock.resize(num_procs, vector<int>(m, 1));
+    proc_rebroadcast_queue.resize(num_procs);
+    proc_pending.resize(num_procs);
 }
 
 Urb::~Urb()
@@ -344,18 +307,26 @@ int Urb::send(Message *m) {
 }
 
 void Urb::rcv(Message **m) {
-    //Message* m = PerfectLinks::rcv(nullptr);
 
-    if(m== nullptr) {
+
+    if((*m)== nullptr) {
         //return m;
     }
 
-    int iseq = (*m)->seqNum - 1;
+    int seq = (*m)->seqNum;
 
-    if((*m)->discard) {
-        //return m;
+    //check if already received message with original sender
+    auto found = find(proc_pending[(*m)->os].begin(), proc_pending[(*m)->os].end(), seq);
+    if(found != proc_pending[(*m)->os].end()) {
+        proc_pending[(*m)->os].insert(seq);
+        proc_rebroadcast_queue[(*m)->os].insert(seq);
     }
 
+
+    //rebroadcast message
+
+
+    /*
     if((*m)->seqNum > vectorClock[(*m)->os].size()) {
         vectorClock[(*m)->os].resize((*m)->seqNum, 1);
     }
@@ -396,5 +367,7 @@ void Urb::rcv(Message **m) {
         delete m;
         //return nullptr;
     }
+
+     */
 
 }

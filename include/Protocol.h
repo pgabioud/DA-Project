@@ -20,8 +20,11 @@ void* single_send(void* args);
 void* broadcast_to_p(void* args);
 
 class Protocol;
+class StubbornLinks;
+class PerfectLinks;
+class Urb;
 typedef struct{
-    Protocol* p;
+    Urb* p;
     int did;
 }process_send_t;
 
@@ -60,11 +63,10 @@ public:
     //Need for perfect links
     vector<set<string>> acks_per_proc;
     set<string> seen;
-    deque<Message> work_queue;
 
-    vector<set<int>> pl_delivered;
     vector<set<int>> bmessages;
     vector<set<int>> rebroadcasts;
+
     vector<int> proc_counters;
 
 };
@@ -88,6 +90,8 @@ public:
     int send(Message *message);
     void rcv(Message **message);
 
+    vector<set<int>> sl_delivered;
+
 };
 
 
@@ -100,7 +104,7 @@ public:
     int send(Message *message);
     void rcv(Message **message);
 
-    vector<set<string>> pl_delivered;
+    vector<set<int>> pl_delivered;
 
 };
 
@@ -117,19 +121,11 @@ public:
     vector<vector<int>> vectorClock;
     set<string> pendingMessage;
     set<string> urb_delivered;
+
+    vector<set<int>> proc_rebroadcast_queue;
+    vector<set<int>> proc_pending;
 };
 
-typedef struct{
-    PerfectLinks* prot;
-    Message* m;
-    int did;
-}pl_send_args;
-
-typedef struct{
-    Protocol* prot;
-    Message* m;
-    int did;
-}send_args;
 
 
 
