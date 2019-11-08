@@ -84,7 +84,6 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
             bmessages[j].insert(i);
         }
     }
-    pl_delivered.resize(num_procs);
 
     // create thread for working
 
@@ -218,32 +217,49 @@ StubbornLinks::~StubbornLinks()
 
 int StubbornLinks::send(Message *m) {
 
-    return UDP::send(m);
+    // message is never ack so payload is always the seq number
+    if(m == nullptr) {
+        return -1;
+    }
+
+    string pload(m->payload);
+    int stry = 1;
+    int er = -1;
+
+    while(stry < max_try) {
+        Message * slm = new Message(m->sid, m->did, m->ack, m->os, m->seqNum);
+        er = UDP::send(slm);
+        stry++;
+    }
+
+    auto found = find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload );
+    if( found == acks_per_proc[m->did].end()) {
+        work_queue.push_back(*m);
+        return -1;
+    } else {
+        //found message
+        return 0;
+    }
+
 }
 
 void StubbornLinks::rcv(Message **m) {
 
-    UDP::rcv(m);
-
-    if ((*m) == nullptr) {
-        //discard
-        return;
+    //Message* m = UDP::rcv(NULL);
+    if(m == nullptr) {
+        //return m;
     }
+    cout << "SL receive : " << *m << endl;
 
     if((*m)->ack) {
         // payload is of format "ack # #"
-        // original sender is me
-        if((*m)->os == curr_proc) {
-
-            pl_delivered[(*m)->sid].insert((*m)->seqNum);
-        }
-        (*m)->discard = true;
-
+        string pload = (*m)->payload.substr(4);
+        acks_per_proc[(*m)->sid].insert(pload);
+        //return nullptr;
     } else {
         // send ack
         Message* ackMess = new Message((*m)->did, (*m)->sid,  true, (*m)->os, (*m)->seqNum);
         UDP::send(ackMess);
-        delete ackMess;
         //return m;
     }
 }
@@ -398,3 +414,4 @@ void Urb::rcv(Message **m) {
     }
 
 }
+

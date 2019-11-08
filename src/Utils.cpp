@@ -22,6 +22,17 @@ Message::Message(int sid, int did, bool ack, int os, int seqNum) {
     this->seqNum = seqNum;
 }
 
+void Message::updatePayload() {
+    string payload_;
+    if(ack) {
+        payload_ = "ack ";
+    }
+    payload_ += to_string(seqNum) + " "+ to_string(os);
+    this->payload.clear();
+    this->payload = std::move(payload_);
+
+}
+
 int stringToInt(string stringToConvert) {
     int outputInt;
     istringstream iss(stringToConvert);

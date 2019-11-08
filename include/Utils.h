@@ -48,6 +48,8 @@ public:
         return this->os == other.os
             && this->payload == other.payload;
     }
+
+    void updatePayload();
 };
 
 inline ostream& operator<<(ostream& os, const Message& m) {

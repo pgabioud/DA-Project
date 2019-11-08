@@ -9,7 +9,7 @@ fi
 
 # time to wait for correct processes to broadcast all messages (in seconds)
 # (should be adapted to the number of messages to send)
-time_to_finish=10
+time_to_finish=5
 
 init_time=2
 

@@ -4,7 +4,7 @@ SRC = src
 BIN = bin
 SAN = -fsanitize=address
 
-CFLAGS=-Wall -Wextra -g -pthread -std=gnu11 -I $(INCLUDES)/ 
+CFLAGS=-Wall -Wextra -g -pthread $(SAN) -std=gnu11 -I $(INCLUDES)/ 
 
 $(BINDIR):
 	mkdir -p $(BINDIR)

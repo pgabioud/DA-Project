@@ -219,6 +219,32 @@ StubbornLinks::~StubbornLinks()
 int StubbornLinks::send(Message *m) {
 
     return UDP::send(m);
+    /*
+    // message is never ack so payload is always the seq number
+    if(m == nullptr) {
+        return -1;
+    }
+
+    string pload(m->payload);
+    int stry = 1;
+    int er = -1;
+
+    while(stry < max_try) {
+        Message * slm = new Message(m->sid, m->did, m->ack, m->os, m->seqNum);
+        er = UDP::send(slm);
+        stry++;
+    }
+
+    auto found = find(acks_per_proc[m->did].begin(), acks_per_proc[m->did].end(), pload );
+    if( found == acks_per_proc[m->did].end()) {
+        work_queue.push_back(*m);
+        return -1;
+    } else {
+        //found message
+        return 0;
+    }
+
+     */
 }
 
 void StubbornLinks::rcv(Message **m) {
@@ -398,3 +424,4 @@ void Urb::rcv(Message **m) {
     }
 
 }
+

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <queue>
+#include <deque>
 #include "Utils.h"
 
 using namespace std;
@@ -19,6 +19,13 @@ void* single_send(void* args);
 
 void* broadcast_to_p(void* args);
 
+class Protocol;
+typedef struct{
+    Protocol* p;
+    int did;
+}process_send_t;
+
+
 class Protocol {
 
 public:
@@ -27,10 +34,10 @@ public:
     int curr_proc;
     int seqNum;
     string log;
-    int sizeBuffer = 50;
+    int sizeBuffer = 10;
     int numMess = 1;
     int max_try = 5;
-    int max_send ;
+    int max_send = 50;
     int curr_seq = 0;
 
 public:
@@ -39,7 +46,9 @@ public:
     virtual ~Protocol();
 
     virtual int send(Message *message) = 0;
-    virtual Message* rcv(Message *message) = 0;
+    virtual void rcv(Message **message) = 0;
+
+
 
     void init_socket(process* proc) ;
 
@@ -51,7 +60,12 @@ public:
     //Need for perfect links
     vector<set<string>> acks_per_proc;
     set<string> seen;
-    queue<Message*> work_queue;
+    deque<Message> work_queue;
+
+    vector<set<int>> pl_delivered;
+    vector<set<int>> bmessages;
+    vector<set<int>> rebroadcasts;
+    vector<int> proc_counters;
 
 };
 
@@ -62,7 +76,7 @@ public:
     ~UDP() override;
 
     int send(Message *message);
-    Message* rcv(Message *message);
+    void rcv(Message **message);
 };
 
 class StubbornLinks : public UDP {
@@ -72,7 +86,7 @@ public:
     ~StubbornLinks() override;
 
     int send(Message *message);
-    Message* rcv(Message *message);
+    void rcv(Message **message);
 
 };
 
@@ -84,7 +98,7 @@ public:
     ~PerfectLinks() override;
 
     int send(Message *message);
-    Message* rcv(Message *message);
+    void rcv(Message **message);
 
     vector<set<string>> pl_delivered;
 
@@ -97,7 +111,7 @@ public:
     ~Urb() override;
 
     int send(Message *message);
-    Message * rcv (Message *message);
+    void rcv (Message **message);
 
 public:
     vector<vector<int>> vectorClock;
