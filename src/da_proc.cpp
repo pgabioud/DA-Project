@@ -44,10 +44,14 @@ void* work(void* arg) {
     // thread speciallized in this process id
     int did = tmp->did;
     cout << "Created thread for :" << did << endl;
+    int max_send = 10;
+    int sizeBuff;
     while(true) {
         // attempt to broadcast
         set<pair<int,int>>::iterator it = prot->bmessages[did].begin();
-        for(unsigned long i =0; i< prot->bmessages[did].size(); i++) {
+
+
+        for(unsigned long i =0; i < prot->bmessages[did].size(); i++) {
             int sender = (*it).second;
             int seq = (*it).first;
             int dest = did;
@@ -59,6 +63,7 @@ void* work(void* arg) {
             prot->bmessages[did].erase(i);
 
         }
+
 
     }
 

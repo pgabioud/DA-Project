@@ -142,6 +142,16 @@ int UDP::send(int seq, int dest, int sender) {
     return er;
 }
 
+int UDP::sendAck(int seq, int dest, int sender) {
+    process *p = m_procs[dest];
+    string payload ="ack " + to_string(seq) + " " + to_string(sender);
+
+    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    if(er < 0) {
+        cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
+    }
+
+}
 
 void UDP::rcv(Message **m) {
     int sockfd = m_procs[curr_proc]->socket;
@@ -231,8 +241,7 @@ void StubbornLinks::rcv(Message **m) {
 
     } else {
         // send ack of the rcv seqnum to the sender of the message containing th original sender of the message
-        UDP::send((*m)->seqNum, (*m)->sid, (*m)->os);
-
+        UDP::sendAck((*m)->seqNum, (*m)->sid, (*m)->os);
         return;
     }
 }
