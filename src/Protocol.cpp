@@ -68,6 +68,7 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     seqNum = 1;
 
 
+
     stringstream ss;
     ss << "da_proc_" << curr_id + 1 << ".out";
     log = ss.str();
@@ -77,25 +78,24 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     ofs.close();
 
     proc_counters.resize(num_procs, 0);
-    rebroadcasts.resize(num_procs);
     bmessages.resize(num_procs);
-    for(int j= 0; j < num_procs;j++) {
-        for(int i = 1; i <=numMess;i++) {
-            //create payload
-            string payload = to_string(i) + " " +  to_string(curr_proc) + " " + to_string(j);
-            bmessages[j].insert(payload);
-        }
-    }
-
-    // create thread for working
-
+    sl_delivered.resize(num_procs);
 
 }
-
 
 Protocol::~Protocol()
 {
 
+}
+
+void Protocol::startSending() {
+    for(int j= 0; j < num_procs;j++) {
+        for(int i = 1; i <=numMess;i++) {
+            //create original messages
+            bmessages[j].insert(make_pair(i,curr_proc));
+        }
+    }
+    return;
 }
 
 UDP::UDP(vector<process*> &procs, int id, int m)
@@ -106,16 +106,36 @@ UDP::UDP(vector<process*> &procs, int id, int m)
 UDP::~UDP()
 {}
 
-int Protocol::broadcast() {
+void Protocol::deliver(int seq, int os) {
+    // write to log
+    vector<string> newLog = {"d", to_string(os+ 1), to_string(seq)};
+    ofstream ofs;
+    ofs.open(log, std::ofstream::out | std::ofstream::app);
+    if (ofs.is_open()) {
+        ofs << newLog[0] + " "+newLog[1] +" "+newLog[2] << endl;
+    }
+    ofs.close();
+}
+
+void Protocol::broadcast(int seq) {
+// write to log
+    vector<string> newLog = {"b",  to_string(seq)};
+    ofstream ofs;
+    ofs.open(log, std::ofstream::out | std::ofstream::app);
+    if (ofs.is_open()) {
+        ofs << newLog[0] + " "+newLog[1] << endl;
+    }
+    ofs.close();
 }
 
 
-int UDP::send(Message *message) {
-    process *p = m_procs[message->did];
+int UDP::send(int seq, int dest, int sender) {
+    process *p = m_procs[dest];
+    string payload = to_string(seq) + " " + to_string(sender);
 
-    int er = sendto(m_procs[curr_proc]->socket, message->payload.c_str(), message->payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
-        cerr << "Error sending message : " << message << endl;
+        cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
     }
 
     return er;
@@ -132,7 +152,7 @@ void UDP::rcv(Message **m) {
     char msg_buf[255];
     size_t len = 255;
 
-    int er = recvfrom(sockfd, msg_buf, len, MSG_DONTWAIT, (struct sockaddr *) &peer_addr, &peer_addr_len);
+    int er = recvfrom(sockfd, msg_buf, len, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
         return;
@@ -152,26 +172,25 @@ void UDP::rcv(Message **m) {
 
         string payload = string(msg_buf);
         auto tokens = split(payload,' ');
-        bool ack = false;
+        int type = -1;
         int os = -1;
         int seq = -1;
-        int sid = -1;
         if (payload.find(ACK) != std::string::npos) {
             // message is ack message
-            ack = true;
-            sid = stringToInt(tokens[3]);
+            type = 1;
             os = stringToInt(tokens[2]);
             seq = stringToInt(tokens[1]);
         } else {
             os = stringToInt(tokens[1]);
             seq = stringToInt(tokens[0]);
-            sid = stringToInt(tokens[2]);
+
         }
-        *m=new Message(idSource,curr_proc, ack, os, seq);
+
+        *m=new Message(idSource,curr_proc, type, os, seq);
         (*m)->discard = false;
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-        m = nullptr;
+        (*m) = nullptr;
     }
 
     bzero(msg_buf,strlen(msg_buf));
@@ -183,16 +202,14 @@ void UDP::rcv(Message **m) {
 StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
 :UDP(procs, id, m)
 {
-    sl_delivered.resize(num_procs);
 }
 
 StubbornLinks::~StubbornLinks()
 {
 }
 
-int StubbornLinks::send(Message *m) {
-
-    return UDP::send(m);
+int StubbornLinks::send(int seq, int dest, int sender) {
+    return UDP::send(seq,dest,sender);
 }
 
 void StubbornLinks::rcv(Message **m) {
@@ -204,25 +221,21 @@ void StubbornLinks::rcv(Message **m) {
         return;
     }
 
-    if((*m)->ack) {
+    if((*m)->type == 1) {
         // payload is of format "ack # #"
-        string payload = (*m)->payload.substr(4);
-        cout << "payload : [" << payload << "]"<< endl;
-        sl_delivered[(*m)->sid].insert(payload);
-
-        (*m)->ack = true;
+        pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
+        sl_delivered[(*m)->sid].insert(rcv);
         (*m)->discard = true;
         return;
 
     } else {
-        // send ack
-        Message* ackMess = new Message((*m)->did, (*m)->sid,  true, (*m)->os, (*m)->seqNum);
-        UDP::send(ackMess);
-        delete ackMess;
+        // send ack of the rcv seqnum to the sender of the message containing th original sender of the message
+        UDP::send((*m)->seqNum, (*m)->sid, (*m)->os);
+
         return;
     }
 }
-
+/*
 
 //Perfect Links Module
 PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
@@ -247,6 +260,10 @@ void PerfectLinks::rcv(Message **m) {
     StubbornLinks::rcv(m);
 
     if((*m)== nullptr) {
+        return;
+    }
+
+    if((*m)->discard) {
         return;
     }
 
@@ -281,6 +298,7 @@ Urb::~Urb()
 
 int Urb::send(Message *m) {
     proc_pending[m->os].insert(m->payload);
+
     return PerfectLinks::send(m);
 
 }
@@ -292,10 +310,13 @@ void Urb::rcv(Message **m) {
     if((*m)== nullptr) {
         return;
     }
+    if((*m)->discard) {
+        return;
+    }
 
     string payload((*m)->payload);
 
-    cout << "URB receive :" << (*m)->payload << endl;
+    cout << "URB receive : [" << payload  << endl;
 
     int iseq = (*m)->seqNum - 1;
     //receive message
@@ -305,12 +326,13 @@ void Urb::rcv(Message **m) {
     bool is_delivered = false;
 
     //check if already received message with original sender
-    auto found = find(proc_pending[(*m)->os].begin(), proc_pending[(*m)->os].end(), payload);
-    if(found == proc_pending[(*m)->os].end()) {
+    auto found = find(proc_pending[(*m)->sid].begin(), proc_pending[(*m)->sid].end(), payload);
+    if(found == proc_pending[(*m)->sid].end()) {
         proc_pending[(*m)->os].insert(payload);
-        proc_rebroadcast_queue[(*m)->os].insert(payload);
+        //modify payload
+        proc_rebroadcast_queue[(*m)->sid].insert(payload);
 
-        cout << "Added to rebroadcast :" << payload << endl;
+        cout << "Added to rebroadcast :" << (*m)->sid<< " : " << payload << endl;
     }
 
     for (auto& s:urb_delivered) {
@@ -331,3 +353,51 @@ void Urb::rcv(Message **m) {
     return;
 
 }
+
+Fifo::Fifo(vector<process *> &procs, int id, int m)
+        :Urb(procs, id, m)
+{
+    next.resize(num_procs, 1);
+}
+
+Fifo::~Fifo()
+{}
+
+int Fifo::send(Message *m) {
+    return Urb::send(m);
+}
+
+void Fifo::rcv(Message **m) {
+    PerfectLinks::rcv(m);
+
+    if((*m)== nullptr || (*m)->discard) {
+        return;
+    }
+
+    vector<int> seqOs = {(*m)->seqNum, (*m)->os};
+    unorderedMessage.push_back(seqOs);
+    bool iterateAgain;
+    vector<vector<int>> msgToDelete;
+
+    do {
+        iterateAgain = false;
+        vector<vector<int>>::iterator it;
+        for (it = unorderedMessage.begin(); it != unorderedMessage.end(); it++) {
+            int counter = next[(*it)[1]];
+            if (counter == (*it)[0]) {
+                iterateAgain = true;
+                next[(*it)[1]] = counter + 1;
+                deliver(*it);
+                msgToDelete.push_back((*it));
+            }
+        }
+    } while (iterateAgain);
+
+    for(auto& elem: msgToDelete) {
+        auto deliveredMsg = find(unorderedMessage.begin(), unorderedMessage.end(), elem);
+        unorderedMessage.erase(deliveredMsg);
+    }
+    return;
+}
+
+ */

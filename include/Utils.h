@@ -29,20 +29,25 @@ struct process{
 };
 
 
+enum class MType{Original, Ack, Rebroadcast};
+
 
 class Message{
 public:
+
     int sid;
     int did;
     int os;  //original sender
     int seqNum;
     string payload;
     size_t size;
-    bool ack = false;
+    int type = 0;
     bool discard = false;
 
+
+
 public:
-    Message(int sid, int did, bool ack, int os, int seqNum);
+    Message(int sid, int did, int type, int os, int seqNum, string val = "");
 
     bool operator==(Message const& other) const {
         return this->os == other.os
@@ -54,7 +59,7 @@ public:
 
 inline ostream& operator<<(ostream& os, const Message& m) {
     return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did<< ", payload: " << m.payload
-        << ", size: " << m.size << ", ack : "<< m.ack<< ")";
+        << ", size: " << m.size << ", type : "<< m.type<< ")";
 }
 
 inline ostream& operator<<(ostream& os, const process& p) {

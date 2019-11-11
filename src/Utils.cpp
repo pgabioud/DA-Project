@@ -3,19 +3,25 @@
 #include <cstring>
 #include <iterator>
 #include <iostream>
+#include <string>
 #include <utility>
 
 #include "Utils.h"
 
-Message::Message(int sid, int did, bool ack, int os, int seqNum) {
+Message::Message(int sid, int did, int type, int os, int seqNum, string val) {
     this->sid = sid;
     this->did = did;
-    this->ack = ack;
+    this->type = type;
     string payload_;
-    if(ack) {
+    if(type == 1) {
         payload_ = "ack ";
     }
-    payload_ += to_string(seqNum) + " "+ to_string(os) + " " + to_string(sid);
+    if(type == 2) {
+        payload_ = val;
+    } else {
+        payload_ += to_string(seqNum) + " "+ to_string(os);
+    }
+
     this->payload = std::move(payload_);
     this->size = this->payload.size();
     this->os = os;
@@ -23,12 +29,16 @@ Message::Message(int sid, int did, bool ack, int os, int seqNum) {
 }
 
 void Message::updatePayload() {
+
     string payload_;
-    if(ack) {
+    if(this->type == 1) {
         payload_ = "ack ";
     }
-    payload_ += to_string(seqNum) + " "+ to_string(os);
-    this->payload.clear();
+
+    if(this->type == 2) {
+        payload_ = "rb ";
+    }
+    payload_ += to_string(seqNum) + " "+ to_string(os) + " " + to_string(sid) + " " + to_string(did);this->payload.clear();
     this->payload = std::move(payload_);
 
 }

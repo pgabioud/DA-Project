@@ -25,7 +25,7 @@ class StubbornLinks;
 class PerfectLinks;
 class Urb;
 typedef struct{
-    Urb* p;
+    Protocol* p;
     int did;
 }process_send_t;
 
@@ -49,14 +49,15 @@ public:
 
     virtual ~Protocol();
 
-    virtual int send(Message *message) = 0;
+    virtual int send(int seq, int dest, int sender) = 0;
     virtual void rcv(Message **message) = 0;
 
-
+    void broadcast(int seq);
+    void deliver(int seq, int os);
+    void startSending();
 
     void init_socket(process* proc) ;
 
-    int broadcast();
 
 protected:
     vector<pthread_t> threads;
@@ -65,8 +66,12 @@ public:
     vector<set<string>> acks_per_proc;
     set<string> seen;
 
-    vector<set<string>> bmessages;
-    vector<set<int>> rebroadcasts;
+    //contains messages represented by pair <seq, original sender> for each process
+    vector<set<pair<int,int>>> bmessages;
+
+    // stubborn links confirmation container
+    vector<set<pair<int,int>>> sl_delivered;
+
 
     vector<int> proc_counters;
 
@@ -78,7 +83,7 @@ public:
     UDP(vector<process*> & processes, int curr_id,int m);
     ~UDP() override;
 
-    int send(Message *message);
+    int send(int seq, int dest, int sender);
     void rcv(Message **message);
 };
 
@@ -88,13 +93,11 @@ public:
     StubbornLinks(vector<process*> & processes, int curr_id,int m);
     ~StubbornLinks() override;
 
-    int send(Message *message);
+    int send(int seq, int dest, int sender);
     void rcv(Message **message);
 
-    vector<set<string>> sl_delivered;
-
 };
-
+/*
 
 class PerfectLinks : public StubbornLinks {
 
@@ -102,7 +105,7 @@ public:
     PerfectLinks(vector<process*> & processes, int curr_id, int m);
     ~PerfectLinks() override;
 
-    int send(Message *message);
+    int send(int seq, int dest, int sender);
     void rcv(Message **message);
 
     vector<set<string>> pl_delivered;
@@ -115,7 +118,7 @@ public:
     Urb(vector<process*> & processes, int curr_id, int m);
     ~Urb() override;
 
-    int send(Message *message);
+    int send(int seq, int dest, int sender);
     void rcv (Message **message);
 
 public:
@@ -127,7 +130,19 @@ public:
     vector<set<string>> proc_pending;
 };
 
+class Fifo : public Urb {
 
+public:
+    Fifo(vector<process*> & processes, int curr_id, int m);
+    ~Fifo() override;
 
+    int send(int seq, int dest, int sender);
+    void rcv(Message** message);
 
+public:
+    vector<int> next;
+    vector<vector<int>> unorderedMessage;
+};
+
+*/
 #endif //PROJECT_PROTOCOL_H
