@@ -80,6 +80,7 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     proc_counters.resize(num_procs, 0);
     bmessages.resize(num_procs);
     sl_delivered.resize(num_procs);
+    pl_delivered.resize(num_procs);
 
 }
 
@@ -235,13 +236,11 @@ void StubbornLinks::rcv(Message **m) {
         return;
     }
 }
-/*
 
 //Perfect Links Module
 PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
 :StubbornLinks(procs, id, m)
 {
-    pl_delivered.resize(num_procs);
 
 }
 
@@ -249,8 +248,8 @@ PerfectLinks::~PerfectLinks()
 {
 }
 
-int PerfectLinks::send(Message *message) {
-    return StubbornLinks::send(message);
+int PerfectLinks::send(int seq, int dest, int sender) {
+    return StubbornLinks::send(seq,dest,sender);
 }
 
 
@@ -267,23 +266,21 @@ void PerfectLinks::rcv(Message **m) {
         return;
     }
 
-    string payload((*m)->payload);
+    pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os);
+    auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), rcv);
+    if(found == pl_delivered[(*m)->sid].end()) {
+        // did not find
+        pl_delivered[(*m)->sid].insert(rcv);
 
-    if(!(*m)->discard) {
-        auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), payload);
-        if(found == pl_delivered[(*m)->sid].end()) {
-            // did not find
-            pl_delivered[(*m)->sid].insert(payload);
-        } else {
-            (*m)->discard = true;
-            return;
-        }
+    } else {
+        // already found so we discard
+        (*m)->discard = true;
     }
 
 
 }
 
-
+/*
 Urb::Urb(vector<process *> &procs, int id, int m)
 :PerfectLinks(procs, id,m)
 {

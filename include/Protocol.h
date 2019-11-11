@@ -71,6 +71,8 @@ public:
 
     // stubborn links confirmation container
     vector<set<pair<int,int>>> sl_delivered;
+    vector<set<pair<int,int>>> pl_delivered;
+
 
 
     vector<int> proc_counters;
@@ -97,7 +99,6 @@ public:
     void rcv(Message **message);
 
 };
-/*
 
 class PerfectLinks : public StubbornLinks {
 
@@ -108,10 +109,10 @@ public:
     int send(int seq, int dest, int sender);
     void rcv(Message **message);
 
-    vector<set<string>> pl_delivered;
-
 };
 
+
+/*
 class Urb : public PerfectLinks {
 
 public:
