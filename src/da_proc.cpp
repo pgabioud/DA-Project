@@ -43,27 +43,23 @@ void* work(void* arg) {
     Protocol* prot = tmp->p;
     // thread speciallized in this process id
     int did = tmp->did;
-    cout << "Created thread for :" << did << endl;
-    int max_send = 10;
-    int sizeBuff;
+    cout << "Created thread for sending to P" << did + 1 << endl;
+
     while(true) {
         // attempt to broadcast
-        set<pair<int,int>>::iterator it = prot->bmessages[did].begin();
 
-
-        for(unsigned long i =0; i < prot->bmessages[did].size(); i++) {
-            int sender = (*it).second;
-            int seq = (*it).first;
+        for(auto it : prot->bmessages[did]) {
+            int sender = (it).second;
+            int seq = (it).first;
             int dest = did;
-            prot->send(seq, did, sender);
-            std::advance(it, 1);
+            prot->send(seq, dest, sender);
         }
 
-        for(auto i : prot->sl_delivered[did]) {
-            prot->bmessages[did].erase(i);
-
+        if(!prot->bmessages[did].empty()) {
+            for(auto i : prot->sl_delivered[did]) {
+                prot->bmessages[did].erase(i);
+            }
         }
-
 
     }
 
@@ -162,7 +158,7 @@ int main(int argc, char** argv) {
     }
 
    //start thread for sending
-    printf("Broadcasting messages.\n");
+   printf("Broadcasting messages.\n");
    prot->startSending();
 
     //broadcast messages

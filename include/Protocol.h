@@ -71,11 +71,13 @@ public:
 
     // stubborn links confirmation container
     vector<set<pair<int,int>>> sl_delivered;
+    // perfect links no duplication container
     vector<set<pair<int,int>>> pl_delivered;
+    // urb pending messages container and vector clocks for uniformisation
+    set<pair<int,int>> pending;
+    set<pair<int,int>> urb_delivered;
+    vector<vector<int>> vectorClock;
 
-
-
-    vector<int> proc_counters;
 
 };
 
@@ -115,7 +117,6 @@ public:
 };
 
 
-/*
 class Urb : public PerfectLinks {
 
 public:
@@ -125,15 +126,10 @@ public:
     int send(int seq, int dest, int sender);
     void rcv (Message **message);
 
-public:
-    vector<vector<int>> vectorClock;
-    set<string> pendingMessage;
-    set<string> urb_delivered;
-
-    vector<set<string>> proc_rebroadcast_queue;
-    vector<set<string>> proc_pending;
 };
 
+
+/*
 class Fifo : public Urb {
 
 public:

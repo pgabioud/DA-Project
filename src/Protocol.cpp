@@ -77,10 +77,14 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     ofs.open(log, std::ofstream::out | std::ofstream::trunc);
     ofs.close();
 
-    proc_counters.resize(num_procs, 0);
     bmessages.resize(num_procs);
+    // SL init
     sl_delivered.resize(num_procs);
+    // PL init
     pl_delivered.resize(num_procs);
+    // URB init
+    vectorClock.resize(num_procs, vector<int>(m, 1));
+
 
 }
 
@@ -90,13 +94,14 @@ Protocol::~Protocol()
 }
 
 void Protocol::startSending() {
-    for(int j= 0; j < num_procs;j++) {
-        for(int i = 1; i <=numMess;i++) {
+    for(int i = 1; i <=numMess;i++) {
+        broadcast(i);
+        for(int j= 0; j < num_procs;j++) {
             //create original messages
             bmessages[j].insert(make_pair(i,curr_proc));
         }
     }
-    return;
+    
 }
 
 UDP::UDP(vector<process*> &procs, int id, int m)
@@ -192,6 +197,7 @@ void UDP::rcv(Message **m) {
             os = stringToInt(tokens[2]);
             seq = stringToInt(tokens[1]);
         } else {
+            type = 0;
             os = stringToInt(tokens[1]);
             seq = stringToInt(tokens[0]);
 
@@ -223,6 +229,8 @@ int StubbornLinks::send(int seq, int dest, int sender) {
     return UDP::send(seq,dest,sender);
 }
 
+mutex sl_lock;
+
 void StubbornLinks::rcv(Message **m) {
 
     UDP::rcv(m);
@@ -231,11 +239,16 @@ void StubbornLinks::rcv(Message **m) {
         //discard
         return;
     }
+    if((*m)->discard) {
+        return;
+    }
 
     if((*m)->type == 1) {
         // payload is of format "ack # #"
         pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
+        sl_lock.lock();
         sl_delivered[(*m)->sid].insert(rcv);
+        sl_lock.unlock();
         (*m)->discard = true;
         return;
 
@@ -261,7 +274,7 @@ int PerfectLinks::send(int seq, int dest, int sender) {
     return StubbornLinks::send(seq,dest,sender);
 }
 
-
+mutex plLock;
 
 void PerfectLinks::rcv(Message **m) {
 
@@ -276,39 +289,39 @@ void PerfectLinks::rcv(Message **m) {
     }
 
     pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os);
+    plLock.lock();
     auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), rcv);
     if(found == pl_delivered[(*m)->sid].end()) {
         // did not find
         pl_delivered[(*m)->sid].insert(rcv);
+        //cout << "PL Delivered : [" << rcv.first << " " << rcv.second << "] from : P"<< (*m)->sid + 1 << endl;
 
     } else {
         // already found so we discard
         (*m)->discard = true;
     }
 
+    plLock.unlock();
 
 }
 
-/*
+
 Urb::Urb(vector<process *> &procs, int id, int m)
 :PerfectLinks(procs, id,m)
 {
-    vectorClock.resize(num_procs, vector<int>(m, 1));
-    proc_rebroadcast_queue.resize(num_procs);
-    proc_pending.resize(num_procs);
 }
 
 Urb::~Urb()
 {
 }
 
-int Urb::send(Message *m) {
-    proc_pending[m->os].insert(m->payload);
+int Urb::send(int seq, int dest, int sender) {
+    //cout << "Sending " << seq << " " << sender << endl;
+    pending.insert(make_pair(seq, dest));
 
-    return PerfectLinks::send(m);
-
+    return PerfectLinks::send(seq, dest, sender);
 }
-
+mutex pendingLock;
 void Urb::rcv(Message **m) {
 
     PerfectLinks::rcv(m);
@@ -320,9 +333,6 @@ void Urb::rcv(Message **m) {
         return;
     }
 
-    string payload((*m)->payload);
-
-    cout << "URB receive : [" << payload  << endl;
 
     int iseq = (*m)->seqNum - 1;
     //receive message
@@ -332,34 +342,38 @@ void Urb::rcv(Message **m) {
     bool is_delivered = false;
 
     //check if already received message with original sender
-    auto found = find(proc_pending[(*m)->sid].begin(), proc_pending[(*m)->sid].end(), payload);
-    if(found == proc_pending[(*m)->sid].end()) {
-        proc_pending[(*m)->os].insert(payload);
-        //modify payload
-        proc_rebroadcast_queue[(*m)->sid].insert(payload);
+    pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os);
 
-        cout << "Added to rebroadcast :" << (*m)->sid<< " : " << payload << endl;
+    pendingLock.lock();
+    auto found = find(pending.begin(), pending.end(), rcv);
+    pendingLock.unlock();
+    if(found == pending.end()) {
+        pending.insert(rcv);
+
+        // rebroadcasting which means adding to all bmessages containers for each process
+        for(int i = 0 ; i < num_procs; i++){
+            if(i != curr_proc){
+                bmessages[i].insert(rcv);
+            }
+        }
+
     }
 
-    for (auto& s:urb_delivered) {
-        if (s == (*m)->payload) {
-            is_delivered = true;
-            break;
-        }
-    };
+    auto delivered = find(urb_delivered.begin(), urb_delivered.end(), rcv);
+    is_delivered = delivered != urb_delivered.end();
 
     bool can_deliver = vectorClock[(*m)->os][iseq] > half;
 
     if(can_deliver  and !is_delivered) {
-        urb_delivered.insert(payload);
+        urb_delivered.insert(rcv);
+        cout << "URB delivered : [" << rcv.first << " " << rcv.second << "]" << endl;
     } else {
         (*m)->discard = true;
     }
 
-    return;
-
 }
 
+/*
 Fifo::Fifo(vector<process *> &procs, int id, int m)
         :Urb(procs, id, m)
 {
