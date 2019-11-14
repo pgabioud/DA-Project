@@ -94,7 +94,6 @@ void UDP::rcv(Message **m) {
             type = 0;
             os = stringToInt(tokens[1]);
             seq = stringToInt(tokens[0]);
-
         }
 
         *m=new Message(idSource,curr_proc, type, os, seq);

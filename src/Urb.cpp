@@ -23,14 +23,14 @@ Urb::Urb(vector<process *> &procs, int id, int m)
 Urb::~Urb()
 {
 }
-
+mutex pendingLock;
 int Urb::send(int seq, int dest, int sender) {
-    //cout << "Sending " << seq << " " << sender << endl;
+    pendingLock.lock();
     pending.insert(make_pair(seq, dest));
-
+    pendingLock.unlock();
     return PerfectLinks::send(seq, dest, sender);
 }
-mutex pendingLock;
+
 void Urb::rcv(Message **m) {
 
     PerfectLinks::rcv(m);
@@ -72,7 +72,7 @@ void Urb::rcv(Message **m) {
 
     bool can_deliver = vectorClock[(*m)->os][iseq] > half;
 
-    if(can_deliver  and !is_delivered) {
+    if(can_deliver and !is_delivered) {
         urb_delivered.insert(rcv);
         cout << "URB delivered : [" << rcv.first << " " << rcv.second << "]" << endl;
     } else {

@@ -5,6 +5,7 @@
 #include <string>
 #include <mutex>
 #include <iostream>
+#include <fstream>
 #include <pthread.h>
 #include "Protocol.h"
 #include "PerfectLinks.h"
@@ -12,11 +13,15 @@
 #include "Fifo.h"
 #include "Utils.h"
 
+
 #define FILENAME "exMembership.txt"
 #define MAXCHARS 255
+#define bufferSize 50
+
+vector<pair<int, int>> logsBuf;
 
 static int wait_for_start = 1;
-string log;
+string logFile;
 
 static void start(int signum) {
     wait_for_start = 0;
@@ -33,8 +38,17 @@ static void stop(int signum) {
     //write/flush output file if necessary
     printf("Writing output.\n");
 
+    ofstream abc;
+    abc.open(logFile, std::ofstream::app);
+    if (abc.is_open()) {
+        for (auto &elem: logsBuf) {
+            vector<string> newLog = {"d", to_string(elem.second + 1), to_string(elem.first)};
+            abc << newLog[0] + " " + newLog[1] + " " + newLog[2] << endl;
+        }
+        abc.close();
+        //exit directly from signal handler
+    }
 
-    //exit directly from signal handler
     exit(0);
 }
 
@@ -93,6 +107,7 @@ void *rcv(void * arg) {
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " << sock << endl;
 
+    logFile = prot->log;
     // reset buffer for receiving
     while(1) {
 
@@ -109,7 +124,21 @@ void *rcv(void * arg) {
             continue;
         }
 
-        //prot->deliver(rm->seqNum, rm->os);
+        logsBuf.push_back(make_pair(rm->seqNum, rm->os));
+        cout << "logbuf size = " << logsBuf.size() << endl;
+        if(logsBuf.size() > bufferSize) {
+            ofstream abc;
+            abc.open(prot->log, std::ofstream::app);
+            if (abc.is_open()) {
+                cout << "ofs open" << endl;
+                for (auto &elem: logsBuf) {
+                    vector<string> newLog = {"d", to_string(elem.second + 1), to_string(elem.first)};
+                    abc << newLog[0] + " " + newLog[1] + " " + newLog[2] << endl;
+                }
+                abc.close();
+            }
+            logsBuf.clear();
+        }
 
         delete rm;
 
@@ -142,7 +171,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new Fifo(mProcs, curr_id - 1, m);
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 
