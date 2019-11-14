@@ -4,16 +4,31 @@ SRC = src
 BIN = bin
 SAN = -fsanitize=address
 
-CFLAGS=-Wall -Wextra -g -pthread $(SAN) -std=gnu11 -I $(INCLUDES)/ 
+CFLAGS=-Wall -Wextra -g -pthread $(SAN) -std=gnu11 -std=c++11 -I $(INCLUDES)/ 
 
 $(BINDIR):
-	mkdir -p $(BINDIR)
+	mkdir -p $(BINDIR)																																																																																																																																																																																																																																																																																																																																																		
 
-da_proc: $(BIN)/Protocol.o $(BIN)/Utils.o $(BIN)/da_proc.o
-	g++ -std=c++0x -Wall $(CFLAGS) $(BIN)/Protocol.o $(BIN)/Utils.o $(BIN)/da_proc.o -o da_proc
+da_proc: $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/Fifo.o $(BIN)/Utils.o $(BIN)/da_proc.o
+	g++ -std=c++0x -Wall $(CFLAGS) $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/Utils.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/Fifo.o $(BIN)/da_proc.o -o da_proc
 
 $(BIN)/Protocol.o : $(SRC)/Protocol.cpp $(INCLUDES)/Protocol.h
 	g++ -c $(CFLAGS) $(SRC)/Protocol.cpp -o $@
+
+$(BIN)/UDP.o : $(SRC)/UDP.cpp $(INCLUDES)/UDP.h $(INCLUDES)/Protocol.h
+	g++ -c $(CFLAGS) $(SRC)/UDP.cpp -o $@
+
+$(BIN)/StubbornLinks.o : $(SRC)/StubbornLinks.cpp $(INCLUDES)/StubbornLinks.h $(INCLUDES)/UDP.h
+	g++ -c $(CFLAGS) $(SRC)/StubbornLinks.cpp -o $@
+
+$(BIN)/PerfectLinks.o : $(SRC)/PerfectLinks.cpp $(INCLUDES)/PerfectLinks.h $(INCLUDES)/StubbornLinks.h
+	g++ -c $(CFLAGS) $(SRC)/PerfectLinks.cpp -o $@
+
+$(BIN)/Urb.o : $(SRC)/Urb.cpp $(INCLUDES)/Urb.h $(INCLUDES)/PerfectLinks.h
+	g++ -c $(CFLAGS) $(SRC)/Urb.cpp -o $@
+
+$(BIN)/Fifo.o : $(SRC)/Fifo.cpp $(INCLUDES)/Fifo.h $(INCLUDES)/Urb.h
+	g++ -c $(CFLAGS) $(SRC)/Fifo.cpp -o $@
 
 $(BIN)/Utils.o : $(SRC)/Utils.cpp $(INCLUDES)/Utils.h
 	g++ -c $(CFLAGS) $(SRC)/Utils.cpp -o $@
