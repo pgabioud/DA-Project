@@ -11,6 +11,6 @@ add_executable(da_proc
         include/Utils.h
         src/da_proc.cpp
         src/Utils.cpp
-        src/Protocol.cpp)
+        src/Protocol.cpp include/Urb.h src/Urb.cpp)
 
 target_link_libraries (da_proc ${CMAKE_THREAD_LIBS_INIT})

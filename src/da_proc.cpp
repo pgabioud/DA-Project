@@ -7,6 +7,8 @@
 #include <iostream>
 #include <pthread.h>
 #include "Protocol.h"
+#include "PerfectLinks.h"
+#include "Urb.h"
 #include "Utils.h"
 
 #define FILENAME "exMembership.txt"
@@ -139,7 +141,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new PerfectLinks(mProcs, curr_id - 1, m);
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 
