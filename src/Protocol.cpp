@@ -83,7 +83,6 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     // PL init
     pl_delivered.resize(num_procs);
     // URB init
-    vectorClock.resize(num_procs, vector<int>(m, 1));
 
 
 }
@@ -114,7 +113,7 @@ UDP::~UDP()
 
 void Protocol::deliver(int seq, int os) {
     // write to log
-    vector<string> newLog = {"d", to_string(os+ 1), to_string(seq)};
+    vector<string> newLog = {"d", to_string((os+ 1)), to_string(seq)};
     ofstream ofs;
     ofs.open(log, std::ofstream::out | std::ofstream::app);
     if (ofs.is_open()) {
@@ -315,10 +314,11 @@ Urb::~Urb()
 {
 }
 
-int Urb::send(int seq, int dest, int sender) {
-    //cout << "Sending " << seq << " " << sender << endl;
-    pending.insert(make_pair(seq, dest));
+bool Urb::canDeliver(pair<string, unsigned> key) {
+    return num_procs * 0.5 < ack[key].size();
+}
 
+int Urb::send(int seq, int dest, int sender) {
     return PerfectLinks::send(seq, dest, sender);
 }
 mutex pendingLock;
@@ -326,51 +326,52 @@ void Urb::rcv(Message **m) {
 
     PerfectLinks::rcv(m);
 
-    if((*m)== nullptr) {
+    if((*m) == nullptr) {
         return;
     }
     if((*m)->discard) {
         return;
     }
 
+    cout << "URB received : ["<< (*m)->payload << "]" << endl;
 
-    int iseq = (*m)->seqNum - 1;
-    //receive message
-    vectorClock[(*m)->os][iseq] += 1;
+    pair<string, int> mRcv = make_pair((*m)->payload, (*m)->os);
 
-    double half = num_procs * 0.5;
-    bool is_delivered = false;
+    lock_guard<mutex> guard(rcv_mtx);
 
-    //check if already received message with original sender
-    pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os);
+    //check if message already delivered
+    auto dlvrd = delivered.find(mRcv);
+    if(dlvrd != delivered.end()) {
+        // already found
+        (*m)->discard = true;
+        return;
+    }
 
-    pendingLock.lock();
-    auto found = find(pending.begin(), pending.end(), rcv);
-    pendingLock.unlock();
-    if(found == pending.end()) {
-        pending.insert(rcv);
-
-        // rebroadcasting which means adding to all bmessages containers for each process
-        for(int i = 0 ; i < num_procs; i++){
-            if(i != curr_proc){
-                bmessages[i].insert(rcv);
+    // not yet delivered
+    // check if first time received
+    auto seen = ack.find(mRcv);
+    if(seen == ack.end()) {
+        // did not see so add to rebroadcasting
+        for(int j= 0; j < num_procs;j++) {
+            //create original messages
+            if(j != curr_proc) {
+                bmessages[j].insert(make_pair((*m)->seqNum, (*m)->os));
             }
         }
 
+        // create ack entry
+        ack[mRcv] = set<int>();
     }
 
-    auto delivered = find(urb_delivered.begin(), urb_delivered.end(), rcv);
-    is_delivered = delivered != urb_delivered.end();
+    // at this point myself and sender have seen this message
+    ack[mRcv].insert(curr_proc);
+    ack[mRcv].insert((*m)->sid);
 
-    bool can_deliver = vectorClock[(*m)->os][iseq] > half;
-
-    if(can_deliver  and !is_delivered) {
-        urb_delivered.insert(rcv);
-        cout << "URB delivered : [" << rcv.first << " " << rcv.second << "]" << endl;
+    if(canDeliver(mRcv)) {
+        delivered.insert(mRcv);
     } else {
         (*m)->discard = true;
     }
-
 }
 
 /*

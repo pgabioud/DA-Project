@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <deque>
+#include <map>
+#include <mutex>
 #include "Utils.h"
 
 using namespace std;
@@ -73,10 +74,11 @@ public:
     vector<set<pair<int,int>>> sl_delivered;
     // perfect links no duplication container
     vector<set<pair<int,int>>> pl_delivered;
-    // urb pending messages container and vector clocks for uniformisation
-    set<pair<int,int>> pending;
-    set<pair<int,int>> urb_delivered;
-    vector<vector<int>> vectorClock;
+    //Uniform reliable broadacast
+    set<pair<string, int>> delivered;
+    set<pair<string, int> > ready_for_delivery;
+    /// @brief Acknowledged messages
+    map<pair<string, int>, set<int> > ack;
 
 
 };
@@ -125,6 +127,10 @@ public:
 
     int send(int seq, int dest, int sender);
     void rcv (Message **message);
+
+    bool canDeliver(pair<string, unsigned> key) ;
+
+    mutex rcv_mtx;
 
 };
 
