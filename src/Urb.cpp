@@ -65,7 +65,7 @@ void Urb::rcv(Message **m) {
         for(int j= 0; j < num_procs;j++) {
             //create original messages
             if(j != curr_proc) {
-                cout <<"[" <<  (*m)->seqNum << " " <<  (*m)->os) <<"]" << endl;
+                cout <<"[" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
                 bmessages[j].insert(make_pair((*m)->seqNum, (*m)->os));
             }
         }
