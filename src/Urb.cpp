@@ -64,8 +64,9 @@ void Urb::rcv(Message **m) {
         // did not see so add to rebroadcasting
         for(int j= 0; j < num_procs;j++) {
             //create original messages
+            cout <<"Rebroadcasting : [" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
+
             if(j != curr_proc) {
-                cout <<"[" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
                 bmessages[j].insert(make_pair((*m)->seqNum, (*m)->os));
             }
         }

@@ -45,6 +45,7 @@ static void stop(int signum) {
             vector<string> newLog = {"d", to_string(elem.second + 1), to_string(elem.first)};
             abc << newLog[0] + " " + newLog[1] + " " + newLog[2] << endl;
         }
+        logsBuf.clear();
         abc.close();
         //exit directly from signal handler
     }
@@ -126,7 +127,7 @@ void *rcv(void * arg) {
         }
 
         logsBuf.push_back(make_pair(rm->seqNum, rm->os));
-        cout << "logbuf size = " << logsBuf.size() << endl;
+        //cout << "logbuf size = " << logsBuf.size() << endl;
         if(logsBuf.size() > bufferSize) {
             ofstream abc;
             abc.open(prot->log, std::ofstream::app);
@@ -171,7 +172,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new Urb(mProcs, curr_id - 1, m);
+    auto *prot = new Fifo(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 

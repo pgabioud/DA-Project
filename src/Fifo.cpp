@@ -11,26 +11,32 @@
 #include <cstring>
 #include <algorithm>
 #include <fstream>
-#include "PerfectLinks.h"
+#include "Urb.h"
 #include "Fifo.h"
 #include <mutex>
 
 
 Fifo::Fifo(vector<process *> &procs, int id, int m)
-        :PerfectLinks(procs, id, m)
+:Urb(procs, id, m)
 {
     next.resize(num_procs, 1);
 }
 
 Fifo::~Fifo()
-{}
+{
+    next.clear();
+    for(auto e : unorderedMessage) {
+        e.clear();
+    }
+    unorderedMessage.clear();
+}
 
 int Fifo::send(int seq, int dest, int sender) {
-    return PerfectLinks::send(seq, dest, sender);
+    return Urb::send(seq, dest, sender);
 }
 
 void Fifo::rcv(Message **m) {
-    PerfectLinks::rcv(m);
+    Urb::rcv(m);
     if((*m)== nullptr || (*m)->discard) {
         return;
     }

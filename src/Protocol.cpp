@@ -18,9 +18,6 @@
 
 void* work(void* arg);
 
-mutex mtx;
-
-
 void Protocol::init_socket(process* proc) {
     int port = proc->port;
     string m_addr = proc->ip;
@@ -86,6 +83,9 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
 
 Protocol::~Protocol()
 {
+    for(auto& p :m_procs) {
+        delete p;
+    }
 }
 
 void Protocol::startSending() {

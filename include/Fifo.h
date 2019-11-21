@@ -7,7 +7,7 @@
 
 #include "PerfectLinks.h"
 
-class Fifo : public PerfectLinks {
+class Fifo : public Urb {
 
 public:
     Fifo(vector<process*> & processes, int curr_id, int m);
