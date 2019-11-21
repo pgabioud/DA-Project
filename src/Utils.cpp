@@ -28,20 +28,6 @@ Message::Message(int sid, int did, int type, int os, int seqNum, string val) {
     this->seqNum = seqNum;
 }
 
-void Message::updatePayload() {
-
-    string payload_;
-    if(this->type == 1) {
-        payload_ = "ack ";
-    }
-
-    if(this->type == 2) {
-        payload_ = "rb ";
-    }
-    payload_ += to_string(seqNum) + " "+ to_string(os) + " " + to_string(sid) + " " + to_string(did);this->payload.clear();
-    this->payload = std::move(payload_);
-
-}
 
 int stringToInt(string stringToConvert) {
     int outputInt;
@@ -137,7 +123,7 @@ void print(process * process){
     cout << "\nIP : " + process->ip;
     cout << "\nPort : " << process->port;
     cout << "\nAffected Process : ";
-    for (int i = 0; i < (process->affectedProcess).size(); i++) {
+    for (unsigned i = 0; i < (process->affectedProcess).size(); i++) {
         cout << (process->affectedProcess).at(i) << "  ";
     }
     cout << "\nSocket : " << process->socket << "\n\n\n";

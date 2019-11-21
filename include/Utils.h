@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstring>
+#include <ostream>
 using namespace std;
 
 /*
@@ -54,7 +55,6 @@ public:
             && this->payload == other.payload;
     }
 
-    void updatePayload();
 };
 
 inline ostream& operator<<(ostream& os, const Message& m) {
@@ -68,6 +68,7 @@ inline ostream& operator<<(ostream& os, const process& p) {
     if(p.socket != -1) {
         os << " , socket : " << p.socket;
     }
+    return os;
 }
 
 

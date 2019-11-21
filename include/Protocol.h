@@ -37,13 +37,8 @@ public:
     vector<process*> m_procs;
     int num_procs;
     int curr_proc;
-    int seqNum;
     string log;
-    int sizeBuffer = 10;
     int numMess = 1;
-    int max_try = 5;
-    int max_send = 50;
-    int curr_seq = 0;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
@@ -77,60 +72,9 @@ public:
     //Uniform reliable broadacast
     set<pair<string, int>> delivered;
     set<pair<string, int> > ready_for_delivery;
-    /// @brief Acknowledged messages
+    // ack messages
     map<pair<string, int>, set<int> > ack;
 
-
-};
-
-class UDP: public Protocol {
-
-public:
-    UDP(vector<process*> & processes, int curr_id,int m);
-    ~UDP() override;
-
-    int send(int seq, int dest, int sender);
-    void rcv(Message **message);
-
-    int sendAck(int seq, int dest, int sender);
-
-};
-
-class StubbornLinks : public UDP {
-
-public:
-    StubbornLinks(vector<process*> & processes, int curr_id,int m);
-    ~StubbornLinks() override;
-
-    int send(int seq, int dest, int sender);
-    void rcv(Message **message);
-
-};
-
-class PerfectLinks : public StubbornLinks {
-
-public:
-    PerfectLinks(vector<process*> & processes, int curr_id, int m);
-    ~PerfectLinks() override;
-
-    int send(int seq, int dest, int sender);
-    void rcv(Message **message);
-
-};
-
-
-class Urb : public PerfectLinks {
-
-public:
-    Urb(vector<process*> & processes, int curr_id, int m);
-    ~Urb() override;
-
-    int send(int seq, int dest, int sender);
-    void rcv (Message **message);
-
-    bool canDeliver(pair<string, unsigned> key) ;
-
-    mutex rcv_mtx;
 
 };
 
