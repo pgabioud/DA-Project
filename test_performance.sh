@@ -20,7 +20,7 @@ echo "127.0.0.1 11001
 #start 5 processes
 for i in `seq 1 5`
 do
-    ./da_proc $i membership &
+    ./da_proc $i membership 100&
     da_proc_id[$i]=$!
 done
 

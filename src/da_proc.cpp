@@ -18,10 +18,8 @@
 #define MAXCHARS 255
 #define bufferSize 50
 
-vector<pair<int, int>> logsBuf;
-
 static int wait_for_start = 1;
-string logFile;
+static bool finish = false;
 
 static void start(int signum) {
     wait_for_start = 0;
@@ -37,24 +35,12 @@ static void stop(int signum) {
 
     //write/flush output file if necessary
     printf("Writing output.\n");
-
-    ofstream abc;
-    abc.open(logFile, std::ofstream::app);
-    if (abc.is_open()) {
-        for (auto &elem: logsBuf) {
-            vector<string> newLog = {"d", to_string(elem.second + 1), to_string(elem.first)};
-            abc << newLog[0] + " " + newLog[1] + " " + newLog[2] << endl;
-        }
-        logsBuf.clear();
-        abc.close();
-        //exit directly from signal handler
-    }
-
-    exit(0);
+    finish = true;
 }
 
 #include <mutex>
 mutex mtxm;
+
 void* work(void* arg) {
     // thread specialized in sending messages to a specific process with id: "did"
     process_send_t* tmp = (process_send_t*) arg;
@@ -65,6 +51,7 @@ void* work(void* arg) {
 
     while(true) {
         // attempt to broadcast
+
 
         for(auto it : prot->bmessages[did]) {
             int sender = (it).second;
@@ -109,42 +96,27 @@ void *rcv(void * arg) {
     int sock = prot->m_procs[prot->curr_proc]->socket;
     cout << "Start receiving on socket : " << sock << endl;
 
-    logFile = prot->log;
     // reset buffer for receiving
     while(1) {
 
-        Message* rm = nullptr;
+        Message *rm = nullptr;
         prot->rcv(&rm);
-
-        if (rm ==nullptr) {
+/*
+        if (rm == nullptr) {
             //discard
             continue;
         }
 
-        if(rm->discard) {
+        if (rm->discard) {
             delete rm;
             continue;
         }
-
-        logsBuf.push_back(make_pair(rm->seqNum, rm->os));
-        //cout << "logbuf size = " << logsBuf.size() << endl;
-        if(logsBuf.size() > bufferSize) {
-            ofstream abc;
-            abc.open(prot->log, std::ofstream::app);
-            if (abc.is_open()) {
-                cout << "ofs open" << endl;
-                for (auto &elem: logsBuf) {
-                    vector<string> newLog = {"d", to_string(elem.second + 1), to_string(elem.first)};
-                    abc << newLog[0] + " " + newLog[1] + " " + newLog[2] << endl;
-                }
-                abc.close();
-            }
-            logsBuf.clear();
-        }
-
+*/
         delete rm;
 
     }
+
+
 
     return arg;
 
@@ -172,7 +144,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new Fifo(mProcs, curr_id - 1, m);
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 
@@ -183,27 +155,32 @@ int main(int argc, char** argv) {
     pthread_create(&t1, NULL, &send, (void *) prot);
 
     //wait until start signal
-   while(wait_for_start) {
+   while(wait_for_start && !finish) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 0;
         sleep_time.tv_nsec = 1000;
         nanosleep(&sleep_time, NULL);
     }
 
-   //start thread for sending
-   printf("Broadcasting messages.\n");
-   prot->startSending();
+   if(!finish) {
+       //start thread for sending
+       printf("Broadcasting messages.\n");
+       prot->startSending();
+   }
 
     //broadcast messages
 
     //wait until stopped
-    while(1) {
+    while(!finish) {
         struct timespec sleep_time;
         sleep_time.tv_sec = 1;
         sleep_time.tv_nsec = 0;
         nanosleep(&sleep_time, NULL);
     }
 
-    pthread_exit(NULL);
+    cout << "End" << endl;
+    prot->finish();
+    cout << "Done writing" << endl;
+
     return 0;
 }

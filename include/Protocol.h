@@ -39,6 +39,8 @@ public:
     int curr_proc;
     string log;
     int numMess = 1;
+    int buffSize = 100;
+    int buffIndex = 0;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
@@ -51,6 +53,7 @@ public:
     void broadcast(int seq);
     void deliver(int seq, int os);
     void startSending();
+    void finish();
 
     void init_socket(process* proc) ;
 
@@ -58,6 +61,9 @@ public:
 protected:
     vector<pthread_t> threads;
 public:
+    //log
+    vector<pair<int,int>> logBuffer;
+
     //Need for perfect links
     vector<set<string>> acks_per_proc;
     set<string> seen;

@@ -13,7 +13,6 @@
 #include <fstream>
 #include "Protocol.h"
 #include "Urb.h"
-#include <mutex>
 
 Urb::Urb(vector<process *> &procs, int id, int m)
 :PerfectLinks(procs, id,m)
@@ -31,7 +30,7 @@ bool Urb::canDeliver(pair<string, unsigned> key) {
 int Urb::send(int seq, int dest, int sender) {
     return PerfectLinks::send(seq, dest, sender);
 }
-mutex pendingLock;
+
 void Urb::rcv(Message **m) {
 
     PerfectLinks::rcv(m);
@@ -43,7 +42,7 @@ void Urb::rcv(Message **m) {
         return;
     }
 
-    cout << "URB received : ["<< (*m)->payload << "]" << endl;
+    //cout << "URB received : ["<< (*m)->payload << "]" << endl;
 
     pair<string, int> mRcv = make_pair((*m)->payload, (*m)->os);
 
@@ -64,7 +63,7 @@ void Urb::rcv(Message **m) {
         // did not see so add to rebroadcasting
         for(int j= 0; j < num_procs;j++) {
             //create original messages
-            cout <<"Rebroadcasting : [" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
+            //cout <<"Rebroadcasting : [" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
 
             if(j != curr_proc) {
                 bmessages[j].insert(make_pair((*m)->seqNum, (*m)->os));
@@ -81,6 +80,7 @@ void Urb::rcv(Message **m) {
 
     if(canDeliver(mRcv)) {
         delivered.insert(mRcv);
+        deliver((*m)->seqNum, (*m)->os);
     } else {
         (*m)->discard = true;
     }

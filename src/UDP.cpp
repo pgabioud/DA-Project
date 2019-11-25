@@ -67,6 +67,7 @@ void UDP::rcv(Message **m) {
     int er = recvfrom(sockfd, msg_buf, len, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
 
     if(er < 0) {
+        (*m) = nullptr;
         return;
     }
 

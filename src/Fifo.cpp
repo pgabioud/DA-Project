@@ -43,9 +43,6 @@ void Fifo::rcv(Message **m) {
 
     vector<int> seqOs = {(*m)->seqNum, (*m)->os};
 
-    if(seqOs[0] == 4) {
-        cout << "4"  << endl;
-    }
     unorderedMessage.insert(seqOs);
     bool iterateAgain;
     vector<vector<int>> msgToDelete;

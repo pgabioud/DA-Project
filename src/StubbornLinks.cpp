@@ -13,7 +13,6 @@
 #include <fstream>
 #include "Protocol.h"
 #include "StubbornLinks.h"
-#include <mutex>
 
 //Stubborn Links Modules
 StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
@@ -28,8 +27,6 @@ StubbornLinks::~StubbornLinks()
 int StubbornLinks::send(int seq, int dest, int sender) {
     return UDP::send(seq,dest,sender);
 }
-
-mutex sl_lock;
 
 void StubbornLinks::rcv(Message **m) {
 
@@ -46,9 +43,9 @@ void StubbornLinks::rcv(Message **m) {
     if((*m)->type == 1) {
         // payload is of format "ack # #"
         pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
-        sl_lock.lock();
+        slmtx.lock();
         sl_delivered[(*m)->sid].insert(rcv);
-        sl_lock.unlock();
+        slmtx.unlock();
         (*m)->discard = true;
         return;
 

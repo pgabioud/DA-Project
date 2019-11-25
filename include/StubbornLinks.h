@@ -19,6 +19,7 @@ public:
     int send(int seq, int dest, int sender);
     void rcv(Message **message);
 
+    mutex slmtx;
 };
 
 

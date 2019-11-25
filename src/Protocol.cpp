@@ -71,6 +71,9 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     ofs.open(log, std::ofstream::out | std::ofstream::trunc);
     ofs.close();
 
+    //init logBuffer
+    logBuffer.resize(buffSize);
+
     bmessages.resize(num_procs);
     // SL init
     sl_delivered.resize(num_procs);
@@ -93,6 +96,7 @@ void Protocol::startSending() {
         broadcast(i);
         for(int j= 0; j < num_procs;j++) {
             //create original messages
+
             bmessages[j].insert(make_pair(i,curr_proc));
         }
     }
@@ -100,14 +104,22 @@ void Protocol::startSending() {
 }
 
 void Protocol::deliver(int seq, int os) {
-    // write to log
-    vector<string> newLog = {"d", to_string((os+ 1)), to_string(seq)};
-    ofstream ofs;
-    ofs.open(log, std::ofstream::out | std::ofstream::app);
-    if (ofs.is_open()) {
-        ofs << newLog[0] + " "+newLog[1] +" "+newLog[2] << endl;
+    logBuffer[buffIndex] = make_pair(seq,os);
+    buffIndex +=1;
+
+    //try to deliver
+    if(buffIndex == buffSize) {
+        // write to log
+        ofstream ofs;
+        ofs.open(log, std::ofstream::out | std::ofstream::app);
+        if (ofs.is_open()) {
+            for(auto& p : logBuffer ) {
+                ofs <<  "d " + to_string(p.second) + " " + to_string(p.first) << endl;
+            }
+        }
+        ofs.close();
+        buffIndex = 0;
     }
-    ofs.close();
 }
 
 void Protocol::broadcast(int seq) {
@@ -121,52 +133,16 @@ void Protocol::broadcast(int seq) {
     ofs.close();
 }
 
+void Protocol::finish() {   ofstream ofs;
+    ofs.open(log, std::ofstream::out | std::ofstream::app);
+    if (ofs.is_open()) {
 
-/*
-Fifo::Fifo(vector<process *> &procs, int id, int m)
-        :Urb(procs, id, m)
-{
-    next.resize(num_procs, 1);
-}
-
-Fifo::~Fifo()
-{}
-
-int Fifo::send(Message *m) {
-    return Urb::send(m);
-}
-
-void Fifo::rcv(Message **m) {
-    PerfectLinks::rcv(m);
-
-    if((*m)== nullptr || (*m)->discard) {
-        return;
-    }
-
-    vector<int> seqOs = {(*m)->seqNum, (*m)->os};
-    unorderedMessage.push_back(seqOs);
-    bool iterateAgain;
-    vector<vector<int>> msgToDelete;
-
-    do {
-        iterateAgain = false;
-        vector<vector<int>>::iterator it;
-        for (it = unorderedMessage.begin(); it != unorderedMessage.end(); it++) {
-            int counter = next[(*it)[1]];
-            if (counter == (*it)[0]) {
-                iterateAgain = true;
-                next[(*it)[1]] = counter + 1;
-                deliver(*it);
-                msgToDelete.push_back((*it));
-            }
+        for(int i = 0; i < buffIndex; i++) {
+            ofs <<  "d " + to_string(logBuffer[i].second) + " " + to_string(logBuffer[i].first) << endl;
         }
-    } while (iterateAgain);
-
-    for(auto& elem: msgToDelete) {
-        auto deliveredMsg = find(unorderedMessage.begin(), unorderedMessage.end(), elem);
-        unorderedMessage.erase(deliveredMsg);
+        logBuffer.clear();
     }
-    return;
-}
 
- */
+    ofs.close();
+
+}

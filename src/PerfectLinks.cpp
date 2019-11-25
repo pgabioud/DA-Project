@@ -10,7 +10,7 @@
 
 //Perfect Links Module
 PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
-        :StubbornLinks(procs, id, m)
+:StubbornLinks(procs, id, m)
 {
 
 }
