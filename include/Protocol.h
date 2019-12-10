@@ -61,6 +61,12 @@ public:
 protected:
     vector<pthread_t> threads;
 public:
+    //vector clock
+    vector<int> vectorClock;
+
+    //pending
+    vector<pair<string, string>> pending;
+
     //log
     vector<pair<int,int>> logBuffer;
 
@@ -80,8 +86,6 @@ public:
     set<pair<string, int> > ready_for_delivery;
     // ack messages
     map<pair<string, int>, set<int> > ack;
-
-
 };
 
 

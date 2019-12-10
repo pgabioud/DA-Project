@@ -81,7 +81,9 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     pl_delivered.resize(num_procs);
     // URB init
 
-
+    //init vector clock
+    //vectorClock.resize(num_procs, vector<int>(num_procs, 0));
+    vectorClock.resize(num_procs, 0);
 }
 
 Protocol::~Protocol()
@@ -100,7 +102,6 @@ void Protocol::startSending() {
             bmessages[j].insert(make_pair(i,curr_proc));
         }
     }
-    
 }
 
 void Protocol::deliver(int seq, int os) {
@@ -114,7 +115,7 @@ void Protocol::deliver(int seq, int os) {
         ofs.open(log, std::ofstream::out | std::ofstream::app);
         if (ofs.is_open()) {
             for(auto& p : logBuffer ) {
-                ofs <<  "d " + to_string(p.second) + " " + to_string(p.first) << endl;
+                ofs <<  "d " + to_string(p.second + 1) + " " + to_string(p.first) << endl;
             }
         }
         ofs.close();
@@ -138,11 +139,9 @@ void Protocol::finish() {   ofstream ofs;
     if (ofs.is_open()) {
 
         for(int i = 0; i < buffIndex; i++) {
-            ofs <<  "d " + to_string(logBuffer[i].second) + " " + to_string(logBuffer[i].first) << endl;
+            ofs <<  "d " + to_string(logBuffer[i].second + 1) + " " + to_string(logBuffer[i].first) << endl;
         }
         logBuffer.clear();
     }
-
     ofs.close();
-
 }

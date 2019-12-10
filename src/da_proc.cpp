@@ -111,6 +111,7 @@ void *rcv(void * arg) {
             delete rm;
             continue;
         }
+        }
 */
         delete rm;
 

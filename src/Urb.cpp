@@ -80,7 +80,7 @@ void Urb::rcv(Message **m) {
 
     if(canDeliver(mRcv)) {
         delivered.insert(mRcv);
-        deliver((*m)->seqNum, (*m)->os);
+        //deliver((*m)->seqNum, (*m)->os);
     } else {
         (*m)->discard = true;
     }

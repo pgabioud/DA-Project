@@ -31,20 +31,23 @@ UDP::~UDP()
 
 int UDP::send(int seq, int dest, int sender) {
     process *p = m_procs[dest];
-    string payload = to_string(seq) + " " + to_string(sender);
-
+    int initValueSelf = vectorClock[sender];
+    vectorClock[sender] = seq;
+    string payload = to_string(seq) + " " + to_string(sender) + " " + vectorClockToString(&vectorClock);
+    vectorClock[sender] = initValueSelf;
     int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
     }
-
     return er;
 }
 
 int UDP::sendAck(int seq, int dest, int sender) {
     process *p = m_procs[dest];
-    string payload ="ack " + to_string(seq) + " " + to_string(sender);
-
+    int initValueSelf = vectorClock[sender];
+    vectorClock[sender] = seq;
+    string payload ="ack " + to_string(seq) + " " + to_string(sender) + " " + vectorClockToString(&vectorClock);
+    vectorClock[sender] = initValueSelf;
     int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
@@ -71,6 +74,7 @@ void UDP::rcv(Message **m) {
         return;
     }
 
+    vector<int> vectorClockSource(num_procs, -1);
 
     int s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
     int port =  ntohs(peer_addr.sin_port) ;
@@ -88,19 +92,21 @@ void UDP::rcv(Message **m) {
         int type = -1;
         int os = -1;
         int seq = -1;
+        string sourceVC = "";
         if (payload.find(ACK) != std::string::npos) {
             // message is ack message
             type = 1;
             os = stringToInt(tokens[2]);
             seq = stringToInt(tokens[1]);
+            sourceVC = tokens[3];
         } else {
             type = 0;
             os = stringToInt(tokens[1]);
             seq = stringToInt(tokens[0]);
-
+            sourceVC = tokens[2];
         }
 
-        *m=new Message(idSource,curr_proc, type, os, seq);
+        *m=new Message(idSource,curr_proc, type, os, seq, "", sourceVC);
         (*m)->discard = false;
     } else {
         fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));

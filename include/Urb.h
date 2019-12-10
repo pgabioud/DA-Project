@@ -15,14 +15,12 @@ public:
     ~Urb() override;
 
     int send(int seq, int dest, int sender);
-    void rcv (Message **message);
+    void rcv(Message **message);
 
     bool canDeliver(pair<string, unsigned> key);
 
 public:
     mutex rcv_mtx;
-
-
-    };
+};
 
 #endif //DA_PROJECT_URB_H
