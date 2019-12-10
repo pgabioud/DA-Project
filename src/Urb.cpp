@@ -46,8 +46,6 @@ void Urb::rcv(Message **m) {
 
     pair<string, int> mRcv = make_pair((*m)->payload, (*m)->os);
 
-    lock_guard<mutex> guard(rcv_mtx);
-
     //check if message already delivered
     auto dlvrd = delivered.find(mRcv);
     if(dlvrd != delivered.end()) {
@@ -66,7 +64,7 @@ void Urb::rcv(Message **m) {
             //cout <<"Rebroadcasting : [" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
 
             if(j != curr_proc) {
-                bmessages[j].insert(make_pair((*m)->seqNum, (*m)->os));
+                PerfectLinks::send((*m)->seqNum, j, (*m)->os);
             }
         }
 

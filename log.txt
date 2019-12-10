@@ -1,0 +1,97 @@
+Initializing.
+membership
+Initializing.
+membership
+Sockets inited
+Process (0) - ip: 127.0.0.1, port: 12001 , socket : 3
+Process (1) - ip: 127.0.0.1, port: 12002 , socket : 4
+Process (2) - ip: 127.0.0.1, port: 12003 , socket : 5
+Process (3) - ip: 127.0.0.1, port: 12004 , socket : 6
+Process (4) - ip: 127.0.0.1, port: 12005 , socket : 7
+Sockets inited
+Process (0) - ip: 127.0.0.1, port: 12001 , socket : 3
+Process (1) - ip: 127.0.0.1, port: 12002 , socket : 4
+Process (2) - ip: 127.0.0.1, port: 12003 , socket : 5
+Process (3) - ip: 127.0.0.1, port: 12004 , socket : 6
+Process (4) - ip: 127.0.0.1, port: 12005 , socket : 7
+Protocol initiated
+Protocol initiated
+Initializing.
+membership
+Sockets inited
+Process (0) - ip: 127.0.0.1, port: 12001 , socket : 3
+Process (1) - ip: 127.0.0.1, port: 12002 , socket : 4
+Process (2) - ip: 127.0.0.1, port: 12003 , socket : 5
+Process (3) - ip: 127.0.0.1, port: 12004 , socket : 6
+Process (4) - ip: 127.0.0.1, port: 12005 , socket : 7
+Initializing.
+membership
+Sockets inited
+Process (0) - ip: 127.0.0.1, port: 12001 , socket : 3
+Process (1) - ip: 127.0.0.1, port: 12002 , socket : 4
+Process (2) - ip: 127.0.0.1, port: 12003 , socket : 5
+Process (3) - ip: 127.0.0.1, port: 12004 , socket : 6
+Process (4) - ip: 127.0.0.1, port: 12005 , socket : 7
+Protocol initiated
+Start receiving on socket : 4
+Start receiving on socket : 7
+Protocol initiated
+Initializing.
+membership
+Sockets inited
+Process (0) - ip: 127.0.0.1, port: 12001 , socket : 3
+Process (1) - ip: 127.0.0.1, port: 12002 , socket : 4
+Process (2) - ip: 127.0.0.1, port: 12003 , socket : 5
+Process (3) - ip: 127.0.0.1, port: 12004 , socket : 6
+Process (4) - ip: 127.0.0.1, port: 12005 , socket : 7
+Start receiving on socket : 6
+Protocol initiated
+Start receiving on socket : 3
+Created thread for sending to P1
+Start receiving on socket : 5
+Created thread for sending to P1
+Created thread for sending to P2
+Created thread for sending to P2
+Created thread for sending to P3
+Created thread for sending to P4
+Created thread for sending to P5
+Created thread for sending to P3
+Created thread for sending to P3
+Created thread for sending to P1
+Created thread for sending to P2
+Created thread for sending to P4
+Created thread for sending to P1
+Created thread for sending to P4
+Created thread for sending to P5
+Created thread for sending to P2
+Created thread for sending to P3
+Created thread for sending to P5
+Created thread for sending to P4
+Created thread for sending to P5
+Evaluating application for 30 seconds.
+Broadcasting messages.
+Immediately stopping network packet processing.
+Writing output.
+End
+Broadcasting messages.
+Immediately stopping network packet processing.
+Writing output.
+End
+Done writing
+Broadcasting messages.
+Immediately stopping network packet processing.
+Writing output.
+End
+Done writing
+Done writing
+Broadcasting messages.
+Immediately stopping network packet processing.
+Writing output.
+End
+Done writing
+Broadcasting messages.
+Immediately stopping network packet processing.
+Writing output.
+End
+Done writing
+Performance test done.

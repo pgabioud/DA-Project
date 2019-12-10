@@ -12,6 +12,7 @@
 PerfectLinks::PerfectLinks(vector<process *> &procs, int id, int m)
 :StubbornLinks(procs, id, m)
 {
+    pl_delivered.resize(num_procs);
 
 }
 
@@ -36,19 +37,17 @@ void PerfectLinks::rcv(Message **m) {
     }
 
     pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os);
-    plLock.lock();
     auto found = find(pl_delivered[(*m)->sid].begin(), pl_delivered[(*m)->sid].end(), rcv);
     if(found == pl_delivered[(*m)->sid].end()) {
         // did not find
         pl_delivered[(*m)->sid].insert(rcv);
-        //cout << "PL Delivered : [" << rcv.first << " " << rcv.second << "] from : P"<< (*m)->sid + 1 << endl;
+        //deliver((*m)->seqNum, (*m)->os);
 
     } else {
         // already found so we discard
         (*m)->discard = true;
     }
 
-    plLock.unlock();
 
 }
 

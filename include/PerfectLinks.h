@@ -13,12 +13,15 @@ class PerfectLinks : public StubbornLinks {
 
 public:
     PerfectLinks(vector<process*> & processes, int curr_id, int m);
-    ~PerfectLinks() override;
+    virtual ~PerfectLinks() override;
 
     int send(int seq, int dest, int sender);
     void rcv(Message **message);
 
-    mutex plLock;
+    //Need for perfect links
+    // perfect links no duplication container
+    vector<unordered_set<pair<int,int>, hash_pair>> pl_delivered;
+
 
 };
 

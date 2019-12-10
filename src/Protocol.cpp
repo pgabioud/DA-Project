@@ -13,9 +13,9 @@
 #include <fstream>
 #include "Protocol.h"
 #include <mutex>
+#include <unistd.h>
 
 #define ACK "ack"
-
 void* work(void* arg);
 
 void Protocol::init_socket(process* proc) {
@@ -42,6 +42,11 @@ void Protocol::init_socket(process* proc) {
         }
     }
 
+    struct timeval read_timeout;
+    read_timeout.tv_sec = 0;
+    read_timeout.tv_usec = 10;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
     proc->addrinfo = addr;
     proc->socket = fd;
 }
@@ -60,7 +65,6 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
 
     //init variables
     //init vectors
-    seen = set<string>();
     threads = vector<pthread_t>();
 
     stringstream ss;
@@ -74,32 +78,27 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
     //init logBuffer
     logBuffer.resize(buffSize);
 
-    bmessages.resize(num_procs);
-    // SL init
-    sl_delivered.resize(num_procs);
-    // PL init
-    pl_delivered.resize(num_procs);
-    // URB init
-
-
 }
 
 Protocol::~Protocol()
 {
+    //Network cleanup
     for(auto& p :m_procs) {
+        close(p->socket);
+        free(p->addrinfo);
         delete p;
     }
-}
+ }
 
 void Protocol::startSending() {
     for(int i = 1; i <=numMess;i++) {
         broadcast(i);
         for(int j= 0; j < num_procs;j++) {
             //create original messages
-
-            bmessages[j].insert(make_pair(i,curr_proc));
+            send(i, j, curr_proc);
         }
     }
+    cout << "Sent all" << endl;
     
 }
 
@@ -108,18 +107,19 @@ void Protocol::deliver(int seq, int os) {
     buffIndex +=1;
 
     //try to deliver
-    if(buffIndex == buffSize) {
+    if(buffIndex >= buffSize) {
         // write to log
         ofstream ofs;
         ofs.open(log, std::ofstream::out | std::ofstream::app);
         if (ofs.is_open()) {
             for(auto& p : logBuffer ) {
-                ofs <<  "d " + to_string(p.second) + " " + to_string(p.first) << endl;
+                ofs <<  "d " + to_string(p.second + 1) + " " + to_string(p.first) << endl;
             }
         }
         ofs.close();
         buffIndex = 0;
     }
+
 }
 
 void Protocol::broadcast(int seq) {
@@ -134,15 +134,18 @@ void Protocol::broadcast(int seq) {
 }
 
 void Protocol::finish() {   ofstream ofs;
+    end = true;
+
+    dlvmtx.lock();
     ofs.open(log, std::ofstream::out | std::ofstream::app);
     if (ofs.is_open()) {
-
         for(int i = 0; i < buffIndex; i++) {
-            ofs <<  "d " + to_string(logBuffer[i].second) + " " + to_string(logBuffer[i].first) << endl;
+            ofs <<  "d " + to_string(logBuffer[i].second + 1) + " " + to_string(logBuffer[i].first) << endl;
         }
         logBuffer.clear();
     }
 
     ofs.close();
 
+    dlvmtx.unlock();
 }

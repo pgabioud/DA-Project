@@ -8,7 +8,7 @@
 
 #include "Utils.h"
 
-Message::Message(int sid, int did, int type, int os, int seqNum, string val) {
+Message::Message(int sid, int did, int type, int os, int seqNum, string val, string stringVC) {
     this->sid = sid;
     this->did = did;
     this->type = type;
@@ -17,7 +17,7 @@ Message::Message(int sid, int did, int type, int os, int seqNum, string val) {
         payload_ = "ack ";
     }
     if(type == 2) {
-        payload_ = val;
+        payload_ = move(val);
     } else {
         payload_ += to_string(seqNum) + " "+ to_string(os);
     }
@@ -26,6 +26,7 @@ Message::Message(int sid, int did, int type, int os, int seqNum, string val) {
     this->size = this->payload.size();
     this->os = os;
     this->seqNum = seqNum;
+    this->strSourceVC = move(stringVC);
 }
 
 
@@ -83,7 +84,7 @@ vector<process*> parser(string fileToParse) {
         }
 
         // Parsing Process Affectation
-        /*
+/*
         int countBroad = 0;
         vector<vector<int>> processAffectation(nbProcess);
         while (countBroad < nbProcess) {
@@ -110,7 +111,7 @@ vector<process*> parser(string fileToParse) {
                 processVector[intId-1]->affectedProcess.push_back(countBroad);
             }
         }
-         */
+*/
         file.close();
     } else {
         throw string("##### error when trying to open the Membership file for parsing #####");
@@ -160,22 +161,19 @@ vector<string> split(const std::string& s, char delimiter)
     return tokens;
 }
 
-//Test parser with exMembership.txt
-/*
-int main() {
-    vector<process*> testProcess = parser("exMembership.txt");
-    for (int i = 0; i < testProcess.size(); i++) {
-        print(testProcess[i]);
+string vectorClockToString(vector<int> *vectorClock)
+{
+    string vc = "";
+    for(auto const& vec: *vectorClock) {
+        vc += to_string(vec) + "#";
     }
-
-    vector<vector<string>> testLog = {
-            {"b", "1"},
-            {"b", "2"},
-            {"d", "2", "1"},
-            {"b", "1"}
-    };
-    vector<vector<string>>* testLogPointer = &testLog;
-    writeLogs("testLog.txt", testLogPointer);
-    return 0;
+    return vc.substr(0, vc.size()-1);
 }
-*/
+
+void stringToVectorClock(const std::string& vcPayload, vector<int> *vectorClock) {
+    int i = 0;
+    for (auto const &token: split(vcPayload, '#')) {
+        (*vectorClock)[i] = stringToInt(token);
+        i += 1;
+    }
+}

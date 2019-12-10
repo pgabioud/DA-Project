@@ -21,6 +21,6 @@ add_executable(da_proc
         src/StubbornLinks.cpp
         src/PerfectLinks.cpp
         src/Urb.cpp
-        src/Fifo.cpp)
+        src/Fifo.cpp include/LCB.h src/LCB.cpp)
 
 target_link_libraries (da_proc ${CMAKE_THREAD_LIBS_INIT})

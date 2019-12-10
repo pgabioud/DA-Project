@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include "Protocol.h"
 #include "PerfectLinks.h"
+#include <unistd.h>
 #include "Urb.h"
 #include "Fifo.h"
 #include "Utils.h"
@@ -38,58 +39,6 @@ static void stop(int signum) {
     finish = true;
 }
 
-#include <mutex>
-mutex mtxm;
-
-void* work(void* arg) {
-    // thread specialized in sending messages to a specific process with id: "did"
-    process_send_t* tmp = (process_send_t*) arg;
-    Protocol* prot = tmp->p;
-    // thread speciallized in this process id
-    int did = tmp->did;
-    cout << "Created thread for sending to P" << did + 1 << endl;
-
-    while(true) {
-        // attempt to broadcast
-
-
-        for(auto it : prot->bmessages[did]) {
-            int sender = (it).second;
-            int seq = (it).first;
-            int dest = did;
-            prot->send(seq, dest, sender);
-        }
-
-        if(!prot->bmessages[did].empty()) {
-            for(auto i : prot->sl_delivered[did]) {
-                prot->bmessages[did].erase(i);
-            }
-        }
-        mtxm.lock();
-        prot->sl_delivered.clear();
-        mtxm.unlock();
-    }
-
-}
-
-void *send(void* arg) {
-    auto* prot = (Protocol*)arg;
-
-    for(int i=0; i < prot->num_procs; i++) {
-        if(i == prot->curr_proc) {
-            continue;
-        }
-
-        process_send_t* arg  = (process_send_t*)malloc(sizeof(process_send_t));
-        pthread_t t;
-        arg->p = prot;
-        arg->did = i;
-        pthread_create(&t, NULL, &work, (void*)arg);
-    }
-    return arg;
-
-}
-
 void *rcv(void * arg) {
 
     auto *prot = (Protocol *) arg;
@@ -97,26 +46,11 @@ void *rcv(void * arg) {
     cout << "Start receiving on socket : " << sock << endl;
 
     // reset buffer for receiving
-    while(1) {
-
+    while(!prot->end) {
         Message *rm = nullptr;
         prot->rcv(&rm);
-/*
-        if (rm == nullptr) {
-            //discard
-            continue;
-        }
-
-        if (rm->discard) {
-            delete rm;
-            continue;
-        }
-*/
         delete rm;
-
     }
-
-
 
     return arg;
 
@@ -152,8 +86,6 @@ int main(int argc, char** argv) {
     //start listening for incoming UDP packets
     pthread_create(&t1, NULL, &rcv, (void *) prot);
 
-    pthread_create(&t1, NULL, &send, (void *) prot);
-
     //wait until start signal
    while(wait_for_start && !finish) {
         struct timespec sleep_time;
@@ -164,12 +96,10 @@ int main(int argc, char** argv) {
 
    if(!finish) {
        //start thread for sending
-       printf("Broadcasting messages.\n");
+       //broadcast messages
+       printf("Start sending.\n");
        prot->startSending();
    }
-
-    //broadcast messages
-
     //wait until stopped
     while(!finish) {
         struct timespec sleep_time;
@@ -178,9 +108,9 @@ int main(int argc, char** argv) {
         nanosleep(&sleep_time, NULL);
     }
 
-    cout << "End" << endl;
+    cout << "Cleanup" << endl;
     prot->finish();
-    cout << "Done writing" << endl;
-
+    pthread_join(t1, NULL);
+    delete prot;
     return 0;
 }

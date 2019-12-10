@@ -38,17 +38,17 @@ public:
 
     int sid;
     int did;
+    int type;
     int os;  //original sender
     int seqNum;
     string payload;
     size_t size;
-    int type = 0;
     bool discard = false;
-
+    string strSourceVC;
 
 
 public:
-    Message(int sid, int did, int type, int os, int seqNum, string val = "");
+    Message(int sid, int did, int type, int os, int seqNum, string val = "", string stringVC = "");
 
     bool operator==(Message const& other) const {
         return this->os == other.os
@@ -104,5 +104,11 @@ void writeLogs(string logFileName, vector<vector<string>> * logs);
 
 
 vector<string> split(const std::string& s, char delimiter);
+
+//string vectorClockToString(vector<vector<int>> *vc);
+string vectorClockToString(vector<int> *vc);
+
+//void stringToVectorClock(const std::string& vcPayload, int nbProc, vector<vector<int>> *vc);
+void stringToVectorClock(const std::string& vcPayload, vector<int> *vc);
 
 #endif //DA_PROJECT_UTILS_H

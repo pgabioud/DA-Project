@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include <mutex>
 #include "Utils.h"
 
@@ -30,6 +31,16 @@ typedef struct{
     int did;
 }process_send_t;
 
+// A hash function used to hash a pair of any kind
+struct hash_pair {
+    template <class T1, class T2>
+    size_t operator()(const pair<T1, T2>& p) const
+    {
+        auto hash1 = hash<T1>{}(p.first);
+        auto hash2 = hash<T2>{}(p.second);
+        return hash1 ^ hash2;
+    }
+};
 
 class Protocol {
 
@@ -39,15 +50,16 @@ public:
     int curr_proc;
     string log;
     int numMess = 1;
-    int buffSize = 100;
+    int buffSize = 20;
     int buffIndex = 0;
+    bool end = false;
 
 public:
     Protocol(vector<process*> & processes, int curr_id, int m);
 
     virtual ~Protocol();
 
-    virtual int send(int seq, int dest, int sender) = 0;
+    virtual int send(int seq, int dest, int sender, string vc = "") = 0;
     virtual void rcv(Message **message) = 0;
 
     void broadcast(int seq);
@@ -57,6 +69,7 @@ public:
 
     void init_socket(process* proc) ;
 
+    mutex dlvmtx;
 
 protected:
     vector<pthread_t> threads;
@@ -65,22 +78,9 @@ public:
     vector<pair<int,int>> logBuffer;
 
     //Need for perfect links
-    vector<set<string>> acks_per_proc;
-    set<string> seen;
-
-    //contains messages represented by pair <seq, original sender> for each process
-    vector<set<pair<int,int>>> bmessages;
-
-    // stubborn links confirmation container
-    vector<set<pair<int,int>>> sl_delivered;
+    vector<unordered_set<string>> acks_per_proc;
     // perfect links no duplication container
-    vector<set<pair<int,int>>> pl_delivered;
-    //Uniform reliable broadacast
-    set<pair<string, int>> delivered;
-    set<pair<string, int> > ready_for_delivery;
-    // ack messages
-    map<pair<string, int>, set<int> > ack;
-
+    vector<unordered_set<pair<int,int>, hash_pair>> pl_delivered;
 
 };
 

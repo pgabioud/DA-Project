@@ -21,8 +21,11 @@ public:
 
 public:
     mutex rcv_mtx;
+    // ack messages
+    unordered_map<pair<string, int>, set<int>, hash_pair > ack;
+    unordered_set<pair<string, int>, hash_pair> delivered;
 
 
-    };
+};
 
 #endif //DA_PROJECT_URB_H

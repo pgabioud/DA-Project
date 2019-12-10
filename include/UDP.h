@@ -13,12 +13,14 @@ class UDP: public Protocol {
 
 public:
     UDP(vector<process*> & processes, int curr_id,int m);
-    ~UDP();
+    virtual ~UDP();
 
-    int send(int seq, int dest, int sender);
+    int send(int seq, int dest, int sender, string vc = 0);
     void rcv(Message **message);
 
     int sendAck(int seq, int dest, int sender);
 
+    mutex rcvmtx;
+    mutex sndmtx;
 };
 #endif //DA_PROJECT_UDP_H
