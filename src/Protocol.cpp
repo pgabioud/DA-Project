@@ -93,12 +93,7 @@ Protocol::~Protocol()
 void Protocol::startSending() {
     for(int i = 1; i <=numMess;i++) {
         broadcast(i);
-        for(int j= 0; j < num_procs;j++) {
-            //create original messages
-            if(j != curr_proc) {
-                send(i, j, curr_proc);
-            }
-        }
+        send(i, 0, curr_proc);
     }
 }
 

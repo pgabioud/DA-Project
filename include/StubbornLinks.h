@@ -7,7 +7,6 @@
 
 #include "UDP.h"
 
-
 using namespace std;
 
 // A hash function used to hash a pair of any kind

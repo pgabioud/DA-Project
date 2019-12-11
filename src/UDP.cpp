@@ -72,11 +72,6 @@ void UDP::rcv(Message **m) {
     bzero(msg_buf, 0);
     size_t len = 255;
 
-    /*
-    // set socket non blocking with timeout
-    static int timeout = TIMEOUT_MS;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
-*/
     int er = recvfrom(sockfd, msg_buf, len, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
     if(er <= 0) {
         (*m) = nullptr;

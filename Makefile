@@ -9,8 +9,8 @@ CFLAGS=-Wall -g -pthread $(SAN) -std=c++11 -I $(INCLUDES)/
 $(BINDIR):
 	mkdir -p $(BINDIR)																																																																																																																																																																																																																																																																																																																																																		
 
-da_proc: $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/Fifo.o $(BIN)/Utils.o $(BIN)/da_proc.o
-	g++ -std=c++0x -Wall $(CFLAGS) $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/Utils.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/Fifo.o $(BIN)/da_proc.o -o da_proc
+da_proc: $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/LCB.o $(BIN)/Fifo.o $(BIN)/Utils.o $(BIN)/da_proc.o
+	g++ $(CFLAGS) $(BIN)/Protocol.o $(BIN)/UDP.o $(BIN)/StubbornLinks.o $(BIN)/PerfectLinks.o $(BIN)/Urb.o $(BIN)/LCB.o $(BIN)/Fifo.o $(BIN)/Utils.o $(BIN)/da_proc.o -o da_proc
 
 $(BIN)/Protocol.o : $(SRC)/Protocol.cpp $(INCLUDES)/Protocol.h
 	g++ -c $(CFLAGS) $(SRC)/Protocol.cpp -o $@
@@ -26,6 +26,9 @@ $(BIN)/PerfectLinks.o : $(SRC)/PerfectLinks.cpp $(INCLUDES)/PerfectLinks.h $(INC
 
 $(BIN)/Urb.o : $(SRC)/Urb.cpp $(INCLUDES)/Urb.h $(INCLUDES)/PerfectLinks.h
 	g++ -c $(CFLAGS) $(SRC)/Urb.cpp -o $@
+
+$(BIN)/LCB.o : $(SRC)/LCB.cpp $(INCLUDES)/LCB.h $(INCLUDES)/Urb.h
+	g++ -c $(CFLAGS) $(SRC)/LCB.cpp -o $@
 
 $(BIN)/Fifo.o : $(SRC)/Fifo.cpp $(INCLUDES)/Fifo.h $(INCLUDES)/Urb.h
 	g++ -c $(CFLAGS) $(SRC)/Fifo.cpp -o $@

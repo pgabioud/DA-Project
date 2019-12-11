@@ -28,9 +28,16 @@ bool Urb::canDeliver(pair<string, unsigned> key) {
 }
 
 int Urb::send(int seq, int dest, int sender, string vc) {
-    //cout << "URB send from os : [" << sender << "] seq : [" << seq << "] vc : [0#0] to ["<< dest <<  "]" << endl;
+    //cout << "URB send from os : [" << sender << "] seq : [" << seq << "] vc :" << vc << "]" << to ["<< dest <<  "]" << endl;
 
-    return PerfectLinks::send(seq, dest, sender, "0#0");
+    //Uniform Reliable Broadcast will send to all processes using perfect links
+    for(int destination= 0; destination < num_procs;destination++) {
+        //create original messages
+        if(destination != curr_proc) {
+            PerfectLinks::send(seq, destination, sender, vc);
+        }
+    }
+    return 0;
 }
 
 void Urb::rcv(Message **m) {
@@ -44,7 +51,11 @@ void Urb::rcv(Message **m) {
         return;
     }
 
-    //cout << "URB received : ["<< (*m)->payload << "] with vc : ["<<(*m)->strSourceVC << "]" << endl;
+    /* uncomment and comment after for testing perfect links
+
+    deliver((*m)->seqNum, (*m)->os);
+    cout << "URB received :" << (**m) << endl;
+*/
 
     pair<string, int> mRcv = make_pair((*m)->payload, (*m)->os);
 

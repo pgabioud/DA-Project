@@ -28,6 +28,10 @@ void* stubbornRun(void* args) {
     vector<Message> messages_copy;
 
     while(!prot->isFinished()) {
+        if(prot->sl_pending_messages[did].empty()) {
+            messages_copy.clear();
+            continue;
+        }
         // Copying vector by copy function
         //copy(prot->sl_pending[did].begin(), prot->sl_pending[did].end(), back_inserter(messages_copy));
         copy(prot->sl_pending_messages[did].begin(), prot->sl_pending_messages[did].end(), back_inserter(messages_copy));
@@ -55,7 +59,6 @@ StubbornLinks::StubbornLinks(vector<process *> &procs, int id, int m)
         }
 
         process_send_t* arg  = (process_send_t*)malloc(sizeof(process_send_t));
-        pthread_t t;
         arg->p = this;
         arg->did = i;
         pthread_create(&run_t[i], NULL, &stubbornRun, (void*)arg);

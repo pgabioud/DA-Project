@@ -59,7 +59,7 @@ public:
 
 inline ostream& operator<<(ostream& os, const Message& m) {
     return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did<< ", payload: " << m.payload
-        << ", size: " << m.size << ", type : "<< m.type<< ")";
+        << ", size: " << m.size << ", type : "<< m.type<< ") with vector clock : ["<< m.strSourceVC << "]";
 }
 
 inline ostream& operator<<(ostream& os, const process& p) {

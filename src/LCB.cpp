@@ -12,6 +12,7 @@
 #include <cstring>
 #include <algorithm>
 #include <fstream>
+#include <iterator>
 #include "Protocol.h"
 #include "LCB.h"
 #include "Utils.h"
@@ -20,19 +21,21 @@ LCB::LCB(vector<process *> &procs, int id, int m)
 :Urb(procs, id,m)
 {
     vectorClock.resize(num_procs);
+    lsn = 0;
+
 }
 
 LCB::~LCB()
 {
+    pending.clear();
 }
 
-int LCB::send(int seq, int dest, int sender) {
-    if(!(find(m_procs[curr_proc]->affectedProcess.begin(), m_procs[curr_proc]->affectedProcess.end(), dest)
-         != m_procs[curr_proc]->affectedProcess.end())) {
-        return 0;
-    }
-    //vectorClock[sender] += 1;
-    return Urb::send(seq, dest, sender);
+int LCB::send(int seq, int dest, int sender, string vc) {
+    vectorClock[curr_proc] = lsn;
+    lsn++;
+
+    //call urb broadcasting
+    return Urb::send(seq, dest, sender, vectorClockToString(&vectorClock));
 }
 
 void LCB::rcv(Message **m) {
@@ -46,30 +49,57 @@ void LCB::rcv(Message **m) {
         return;
     }
 
-    pending.push_back(make_tuple(to_string((*m)->os),(*m)->strSourceVC, to_string((*m)->seqNum)));
+    //cout <<"LCB received : " << (**m) << endl;
+    //deliver((*m)->seqNum, (*m)->os);
 
-    vector<int> sourceVectorClock(num_procs, 0);
-    stringToVectorClock((*m)->strSourceVC, &sourceVectorClock);
+    // insert message in pending messages container
+    Message key((*m)->sid, (*m)->did, 0, (*m)->os, (*m)->seqNum, "", (*m)->strSourceVC);
+    pending.insert(key);
 
     vector<int> pendingVectorClock(num_procs, 0);
 
-    bool findSomething = true;
-    while (findSomething) {
-        findSomething = false;
-        for(std::vector<int>::size_type i = 0; i != pending.size(); i++) {
-            stringToVectorClock(get<1>(pending[i]), &pendingVectorClock);
-            bool inf = true;
-            for(auto const& affectProc: m_procs[curr_proc]->affectedProcess) {
-                if(pendingVectorClock[affectProc] > vectorClock[affectProc]) {
-                    inf = false;
-                }
-                if(inf) {
-                    findSomething = true;
-                    pending.erase(pending.begin()+i);
-                    vectorClock[affectProc] += 1;
-                    deliver(stringToInt(get<2>(pending[i])), affectProc);
-                }
+    //attempt delivery
+    bool invalid = false;
+
+    auto m_it = pending.begin();
+
+    while (m_it != pending.end()) {
+        Message curr_m = *m_it;
+        stringToVectorClock(curr_m.strSourceVC, &pendingVectorClock);
+        invalid = false;
+        /*
+        cout << "W' : [";
+        for(auto v : pendingVectorClock) {
+            cout << v << " ";
+        }
+        cout << "]" <<endl;
+        cout << "V : [";
+        for(auto v : vectorClock) {
+            cout << v << " ";
+        }
+        cout << "]" <<endl;
+*/
+        for (int i = 0; i < pendingVectorClock.size(); i++) {
+            if (pendingVectorClock[i] > vectorClock[i]) {
+                invalid = true;
+                break;
             }
         }
+
+        if (!invalid) {
+            //message is valid and can deliver, need to restart attempt
+            deliver(curr_m.seqNum, curr_m.os);
+            pending.erase(m_it);
+            m_it = pending.begin();
+            if((*m)->os != curr_proc) vectorClock[(*m)->os] += 1;
+        } else {
+            //advace iterator to the next message if not valid
+            m_it++;
+        }
     }
+
+    cout << "Pending size : " << pending.size() << endl;
+    //cout <<"LCB received : " << (**m) << endl;
+
+
 }
