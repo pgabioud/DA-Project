@@ -35,8 +35,6 @@ private:
     bool sl_finish = false;
 public:
     // vector containing message sets per process to send
-    vector<unordered_set<pair<int,int>, hash_pair>> sl_pending;
-    //second attempt
     vector<unordered_set<Message, hash_message>> sl_pending_messages;
 
 };

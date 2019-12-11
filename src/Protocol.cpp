@@ -42,9 +42,10 @@ void Protocol::init_socket(process* proc) {
         }
     }
 
+
     struct timeval read_timeout;
     read_timeout.tv_sec = 0;
-    read_timeout.tv_usec = 10;
+    read_timeout.tv_usec = 5;
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
 
     proc->addrinfo = addr;
@@ -95,7 +96,9 @@ void Protocol::startSending() {
         broadcast(i);
         for(int j= 0; j < num_procs;j++) {
             //create original messages
-            send(i, j, curr_proc);
+            if(j != curr_proc) {
+                send(i, j, curr_proc);
+            }
         }
     }
     cout << "Sent all" << endl;

@@ -15,7 +15,7 @@ public:
     PerfectLinks(vector<process*> & processes, int curr_id, int m);
     virtual ~PerfectLinks() override;
 
-    int send(int seq, int dest, int sender);
+    int send(int seq, int dest, int sender, string vc = "");
     void rcv(Message **message);
 
     //Need for perfect links

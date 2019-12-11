@@ -33,10 +33,11 @@ UDP::~UDP()
 int UDP::send(int seq, int dest, int sender, string vc) {
     sndmtx.lock();
     process *p = m_procs[dest];
+    //cout << "UDP send vc : " << vc << endl;
     string payload = to_string(seq) + " " + to_string(sender) + " " + vc+  "\0";
     //cout << "UDP send to : [" << dest + 1 <<"] : [" << seq << " " << sender + 1 << "]" << endl;
 
-    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size()+1, 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
     }
@@ -47,9 +48,8 @@ int UDP::send(int seq, int dest, int sender, string vc) {
 int UDP::sendAck(int seq, int dest, int sender) {
     process *p = m_procs[dest];
     string payload ="ack " + to_string(seq) + " " + to_string(sender) +  "\0";
-//    cout << "Sending [" << payload.c_str() << "]" << endl;
 
-    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size(), 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+    int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size()+ 1, 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
     if(er < 0) {
         cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
     }
@@ -69,11 +69,13 @@ void UDP::rcv(Message **m) {
     bzero(msg_buf, 0);
     size_t len = 255;
 
+    /*
+    // set socket non blocking with timeout
     static int timeout = TIMEOUT_MS;
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
-
+*/
     int er = recvfrom(sockfd, msg_buf, len, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
-    if(er < 0) {
+    if(er <= 0) {
         (*m) = nullptr;
         return;
     }
@@ -91,7 +93,6 @@ void UDP::rcv(Message **m) {
         }
 
         string payload = string(msg_buf);
-  //      cout << payload << endl;
         auto tokens = split(payload,' ');
         int type = -1;
         int os = -1;
@@ -102,6 +103,7 @@ void UDP::rcv(Message **m) {
             type = 1;
             os = stringToInt(tokens[2]);
             seq = stringToInt(tokens[1]);
+
         } else {
             type = 0;
             os = stringToInt(tokens[1]);
@@ -110,7 +112,9 @@ void UDP::rcv(Message **m) {
         }
 
         //cout << "UDP receive from : [" << idSource + 1 <<"] : [" << seq << " " << os + 1 << "]" << endl;
-        *m=new Message(idSource,curr_proc, type, os, seq);
+        *m=new Message(idSource,curr_proc, type, os, seq,"", sourceVC);
+
+       // cout << "UDP receive vc [" << (*m)->strSourceVC << "]" << endl;
         (*m)->discard = false;
         //deliver((*m)->seqNum, (*m)->os);
     } else {

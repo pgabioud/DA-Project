@@ -14,13 +14,12 @@ public:
     Urb(vector<process*> & processes, int curr_id, int m);
     ~Urb() override;
 
-    int send(int seq, int dest, int sender);
+    int send(int seq, int dest, int sender, string vc = "");
     void rcv (Message **message);
 
     bool canDeliver(pair<string, unsigned> key);
 
 public:
-    mutex rcv_mtx;
     // ack messages
     unordered_map<pair<string, int>, set<int>, hash_pair > ack;
     unordered_set<pair<string, int>, hash_pair> delivered;

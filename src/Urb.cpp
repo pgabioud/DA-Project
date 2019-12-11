@@ -27,8 +27,10 @@ bool Urb::canDeliver(pair<string, unsigned> key) {
     return num_procs * 0.5 < ack[key].size();
 }
 
-int Urb::send(int seq, int dest, int sender) {
-    return PerfectLinks::send(seq, dest, sender);
+int Urb::send(int seq, int dest, int sender, string vc) {
+    //cout << "URB send from os : [" << sender << "] seq : [" << seq << "] vc : [0#0] to ["<< dest <<  "]" << endl;
+
+    return PerfectLinks::send(seq, dest, sender, "0#0");
 }
 
 void Urb::rcv(Message **m) {
@@ -42,7 +44,7 @@ void Urb::rcv(Message **m) {
         return;
     }
 
-    //cout << "URB received : ["<< (*m)->payload << "]" << endl;
+    //cout << "URB received : ["<< (*m)->payload << "] with vc : ["<<(*m)->strSourceVC << "]" << endl;
 
     pair<string, int> mRcv = make_pair((*m)->payload, (*m)->os);
 
@@ -64,7 +66,7 @@ void Urb::rcv(Message **m) {
             //cout <<"Rebroadcasting : [" <<  (*m)->seqNum << " " <<  (*m)->os <<"]" << endl;
 
             if(j != curr_proc) {
-                PerfectLinks::send((*m)->seqNum, j, (*m)->os);
+                PerfectLinks::send((*m)->seqNum, j, (*m)->os, (*m)->strSourceVC);
             }
         }
 
