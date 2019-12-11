@@ -109,6 +109,8 @@ vector<string> split(const std::string& s, char delimiter);
 string vectorClockToString(vector<int> *vc);
 
 //void stringToVectorClock(const std::string& vcPayload, int nbProc, vector<vector<int>> *vc);
+
 void stringToVectorClock(const std::string& vcPayload, vector<int> *vc);
+void stringToVectorClock(const std::string& vcPayload, int nbProc, vector<int> *vc);
 
 #endif //DA_PROJECT_UTILS_H

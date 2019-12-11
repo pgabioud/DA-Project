@@ -14,6 +14,7 @@ public:
     Urb(vector<process*> & processes, int curr_id, int m);
     ~Urb() override;
 
+
     int send(int seq, int dest, int sender, string vc = "");
     void rcv (Message **message);
 
@@ -23,8 +24,6 @@ public:
     // ack messages
     unordered_map<pair<string, int>, set<int>, hash_pair > ack;
     unordered_set<pair<string, int>, hash_pair> delivered;
-
-
 };
 
 #endif //DA_PROJECT_URB_H

@@ -35,7 +35,7 @@ int stringToInt(string stringToConvert) {
     istringstream iss(stringToConvert);
     iss >> outputInt;
     if (iss.fail()) {
-        return -666;
+        return -2;
     }
     return outputInt;
 }
@@ -63,7 +63,7 @@ vector<process*> parser(string fileToParse) {
             size_t pos = line.find(delimiter);
             string countString = line.substr(0, pos);
             countIp = stringToInt(countString);
-            if (countIp == -666) {
+            if (countIp == -2) {
                 file.close();
                 throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (1) #####");
             }
@@ -76,7 +76,7 @@ vector<process*> parser(string fileToParse) {
             processVector[countIp-1]->ip = parsedLine[0];
 
             int port = stringToInt(parsedLine[1]);
-            if (port == -666) {
+            if (port == -2) {
                 file.close();
                 throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (2) #####");
             }
@@ -93,7 +93,7 @@ vector<process*> parser(string fileToParse) {
             string countString = line.substr(0, pos);
 
             countBroad = stringToInt(countString);
-            if (countBroad == -666) {
+            if (countBroad == -2) {
                 file.close();
                 throw string("error when reading the indexes of the entries IP and Port of the Membership file when parsing (2)");
             }
@@ -104,7 +104,7 @@ vector<process*> parser(string fileToParse) {
             string token;
             while (getline(issProcess, token, ' ')) {
                 intId = stringToInt(token);
-                if (intId == -666) {
+                if (intId == -2) {
                     file.close();
                     throw string("##### error when reading the indexes of the entries IP and Port of the Membership file when parsing (3) #####");
                 }
@@ -169,6 +169,40 @@ string vectorClockToString(vector<int> *vectorClock)
     }
     return vc.substr(0, vc.size()-1);
 }
+
+void stringToVectorClock(const std::string& vcPayload, int nbProcs, vector<int> *vectorClock) {
+    int i = 0;
+    for (auto const &token: split(vcPayload, '#')) {
+        (*vectorClock)[i] = stringToInt(token);
+        i += 1;
+    }
+}
+
+/*
+string vectorClockToString(vector<vector<int>> *vectorClock)
+{
+    string vc = "";
+    for(auto const& vec: *vectorClock) {
+        for(auto const& value: vec){
+            vc += to_string(value) + "#";
+        }
+    }
+    return vc.substr(0, vc.size()-1);
+}
+
+void stringToVectorClock(const std::string& vcPayload, int nbProcs, vector<vector<int>> *vectorClock)
+{
+    int i = 0;
+    int count = 0;
+    for(auto const& token: split(vcPayload, '#')) {
+        (*vectorClock)[count][i] = stringToInt(token);
+        i = (i + 1)%nbProcs;
+        if(i == 0) {
+            count += 1;
+        }
+    }
+}*/
+
 
 void stringToVectorClock(const std::string& vcPayload, vector<int> *vectorClock) {
     int i = 0;

@@ -49,6 +49,7 @@ void *rcv(void * arg) {
     while(!prot->end) {
         Message *rm = nullptr;
         prot->rcv(&rm);
+
         delete rm;
     }
 

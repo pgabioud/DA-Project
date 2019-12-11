@@ -74,14 +74,17 @@ public:
 protected:
     vector<pthread_t> threads;
 public:
+    //vector clock
+    vector<int> vectorClock;
+
+    //pending
+    vector<pair<string, string>> pending;
+
     //log
     vector<pair<int,int>> logBuffer;
 
     //Need for perfect links
     vector<unordered_set<string>> acks_per_proc;
-    // perfect links no duplication container
-    vector<unordered_set<pair<int,int>, hash_pair>> pl_delivered;
-
 };
 
 

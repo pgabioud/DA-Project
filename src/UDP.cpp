@@ -33,6 +33,7 @@ UDP::~UDP()
 int UDP::send(int seq, int dest, int sender, string vc) {
     sndmtx.lock();
     process *p = m_procs[dest];
+
     //cout << "UDP send vc : " << vc << endl;
     string payload = to_string(seq) + " " + to_string(sender) + " " + vc+  "\0";
     //cout << "UDP send to : [" << dest + 1 <<"] : [" << seq << " " << sender + 1 << "]" << endl;
@@ -47,9 +48,11 @@ int UDP::send(int seq, int dest, int sender, string vc) {
 
 int UDP::sendAck(int seq, int dest, int sender) {
     process *p = m_procs[dest];
+
     string payload ="ack " + to_string(seq) + " " + to_string(sender) +  "\0";
 
     int er = sendto(m_procs[curr_proc]->socket, payload.c_str(), payload.size()+ 1, 0, (const sockaddr*)(p->addrinfo), sizeof(*p->addrinfo));
+
     if(er < 0) {
         cerr << "Error sending message : " << payload << " to p" << dest + 1 << endl;
     }
@@ -98,6 +101,7 @@ void UDP::rcv(Message **m) {
         int os = -1;
         int seq = -1;
         string sourceVC ="";
+
         if (payload.find(ACK) != std::string::npos) {
             // message is ack message
             type = 1;
@@ -114,7 +118,6 @@ void UDP::rcv(Message **m) {
         //cout << "UDP receive from : [" << idSource + 1 <<"] : [" << seq << " " << os + 1 << "]" << endl;
         *m=new Message(idSource,curr_proc, type, os, seq,"", sourceVC);
 
-       // cout << "UDP receive vc [" << (*m)->strSourceVC << "]" << endl;
         (*m)->discard = false;
         //deliver((*m)->seqNum, (*m)->os);
     } else {

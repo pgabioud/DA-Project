@@ -78,7 +78,6 @@ Protocol::Protocol(vector<process*> &processes, int curr_id, int m)
 
     //init logBuffer
     logBuffer.resize(buffSize);
-
 }
 
 Protocol::~Protocol()
@@ -101,8 +100,6 @@ void Protocol::startSending() {
             }
         }
     }
-    cout << "Sent all" << endl;
-    
 }
 
 void Protocol::deliver(int seq, int os) {
@@ -147,7 +144,6 @@ void Protocol::finish() {   ofstream ofs;
         }
         logBuffer.clear();
     }
-
     ofs.close();
 
     dlvmtx.unlock();
