@@ -104,7 +104,7 @@ void LCB::rcv(Message **m) {
         }
     }
 
-    cout << "Pending size : " << pending.size() << endl;
+    cout << "P" << curr_proc + 1 << " Pending size : " << pending.size() << endl;
     //cout <<"LCB received : " << (**m) << endl;
 
 }

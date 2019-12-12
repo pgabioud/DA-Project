@@ -29,19 +29,26 @@ void* stubbornRun(void* args) {
 
     while(!prot->isFinished()) {
         if(prot->sl_pending_messages[did].empty()) {
-            messages_copy.clear();
             continue;
         }
+
         // Copying vector by copy function
         //copy(prot->sl_pending[did].begin(), prot->sl_pending[did].end(), back_inserter(messages_copy));
-        copy(prot->sl_pending_messages[did].begin(), prot->sl_pending_messages[did].end(), back_inserter(messages_copy));
+        prot->mtx.lock();
+        for(auto it : prot->sl_pending_messages[did]) {
+            high_resolution_clock::time_point now = high_resolution_clock::now();
+            Message m = it.first;
+            TimeoutInfo t_info = it.second;
+            long time_span = duration_cast<nanoseconds>(now - t_info.timeofsend).count();
+            if (time_span > t_info.timeout_) {
+                //resend
+                prot->UDP::send(m.seqNum, m.did, m.os, m.strSourceVC); // UDP send
 
-        for(auto it : messages_copy) {
-            prot->UDP::send(it.seqNum, it.did, it.os, it.strSourceVC); // UDP send
-
-            nanosleep((const struct timespec[]){{0, 1000000000L}}, NULL);
+                t_info.timeout_ *= 2;
+                it.second = t_info;
+            }
         }
-        messages_copy.clear();
+        prot->mtx.unlock();
     }
     free(args);
     return nullptr;
@@ -71,6 +78,9 @@ StubbornLinks::~StubbornLinks()
     for(auto t: run_t) {
         pthread_join(t, NULL);
     }
+    for(auto v : sl_pending_messages) {
+        v.clear();
+    }
 }
 
 bool StubbornLinks::isFinished() const {
@@ -79,7 +89,8 @@ bool StubbornLinks::isFinished() const {
 
 int StubbornLinks::send(int seq, int dest, int sender, string vc) {
     //sl_pending[dest].insert(make_pair(seq,sender));
-    sl_pending_messages[dest].insert(Message(curr_proc, dest,0, sender, seq ,"",vc));
+    TimeoutInfo t_info;
+    sl_pending_messages[dest].insert({Message(curr_proc, dest,0, sender, seq ,"",vc),t_info});
     return 0;
 }
 void StubbornLinks::rcv(Message **m) {
@@ -100,8 +111,9 @@ void StubbornLinks::rcv(Message **m) {
         pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
         Message key((*m)->sid,(*m)->did,0,(*m)->os, (*m)->seqNum);
 
+        mtx.lock();
         sl_pending_messages[(*m)->sid].erase(key);
-
+        mtx.unlock();
         (*m)->discard = true;
         return;
 

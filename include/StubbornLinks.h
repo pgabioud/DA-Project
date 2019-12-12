@@ -5,9 +5,11 @@
 #ifndef DA_PROJECT_STUBBORNLINKS_H
 #define DA_PROJECT_STUBBORNLINKS_H
 
+#include <chrono>
 #include "UDP.h"
 
 using namespace std;
+using namespace chrono;
 
 /*
  * A hash function used to hash a pair of any kind
@@ -19,6 +21,17 @@ struct hash_message {
         auto hash2 = hash<int>{}(m.os);
         return hash1 ^ hash2;
     }
+};
+
+struct TimeoutInfo {
+    high_resolution_clock::time_point  timeofsend; //in nanoseconds
+    int timeout_; //in nanoseconds
+
+    TimeoutInfo() {
+        timeofsend = high_resolution_clock::now();
+        timeout_ = 100000000;
+    }
+
 };
 /*
  * Stubborn link module
@@ -33,14 +46,14 @@ public:
     void rcv(Message **message);
 
     bool isFinished() const;
-
+    mutex mtx;
 private:
     vector<pthread_t> run_t;
     bool sl_finish = false;
 
 public:
     // vector containing message sets per process to send
-    vector<unordered_set<Message, hash_message>> sl_pending_messages;
+    vector<unordered_map<Message,TimeoutInfo, hash_message>> sl_pending_messages;
 };
 
 

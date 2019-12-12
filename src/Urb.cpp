@@ -82,7 +82,7 @@ void Urb::rcv(Message **m) {
         }
 
         // create ack entry
-        ack[mRcv] = set<int>();
+        ack[mRcv] = unordered_set<int>();
     }
 
     // at this point myself and sender have seen this message

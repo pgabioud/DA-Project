@@ -28,7 +28,7 @@ public:
 
 public:
     // ack messages
-    unordered_map<pair<string, int>, set<int>, hash_pair > ack;
+    unordered_map<pair<string, int>, unordered_set<int>, hash_pair > ack;
 
     //delivered messages
     unordered_set<pair<string, int>, hash_pair> delivered;
