@@ -61,7 +61,7 @@ void LCB::rcv(Message **m) {
 
     //attempt delivery
     bool invalid;
-
+    auto sender_depend = m_procs[(*m)->os]->affectedProcess;
     auto m_it = pending.begin();
 
     while (m_it != pending.end()) {
@@ -69,7 +69,7 @@ void LCB::rcv(Message **m) {
         Message curr_m = *m_it;
         stringToVectorClock(curr_m.strSourceVC, &pendingVectorClock);
         invalid = false;
-        /*
+/*
         cout << "W' : [";
         for(auto v : pendingVectorClock) {
             cout << v << " ";
@@ -81,8 +81,12 @@ void LCB::rcv(Message **m) {
         }
         cout << "]" <<endl;
 */
-        for (int i = 0; i < pendingVectorClock.size(); i++) {
-            if (pendingVectorClock[i] > vectorClock[i]) {
+        //check dependencies
+        if(pendingVectorClock[curr_m.os] > vectorClock[curr_m.os]) {
+            invalid = true;
+        }
+        for (auto i : sender_depend ) {
+            if (pendingVectorClock[curr_m.os] > vectorClock[i-1]) {
                 invalid = true;
                 break;
             }
@@ -93,14 +97,14 @@ void LCB::rcv(Message **m) {
             deliver(curr_m.seqNum, curr_m.os);
             pending.erase(m_it);
             m_it = pending.begin();
-            vectorClock[(*m)->os] += 1;
+            vectorClock[curr_m.os] += 1;
         } else {
             //advace iterator to the next message if not valid
             m_it++;
         }
     }
 
-    //cout << "Pending size : " << pending.size() << endl;
+    cout << "Pending size : " << pending.size() << endl;
     //cout <<"LCB received : " << (**m) << endl;
 
 
