@@ -32,7 +32,19 @@ struct process{
 
 enum class MType{Original, Ack, Rebroadcast};
 
-
+/*
+ * Message class
+ *
+ * sid = id of source process
+ * did = destination of source process
+ * type = type of message (ack/not ack)
+ * os = original sender
+ * seqNum = sequence number
+ * payload
+ * size
+ * discard = true if message must be discarded
+ * strSourceVc = vector clock of sender
+ */
 class Message{
 public:
 
@@ -57,11 +69,17 @@ public:
 
 };
 
+/*
+ * Pretty print of a message
+ */
 inline ostream& operator<<(ostream& os, const Message& m) {
     return os << "Message (sender: " << m.sid << ", deliverer: "<< m.did<< ", payload: " << m.payload
         << ", size: " << m.size << ", type : "<< m.type<< ") with vector clock : ["<< m.strSourceVC << "]";
 }
 
+/*
+ * Pretty print of a process
+ */
 inline ostream& operator<<(ostream& os, const process& p) {
     os << "Process (" << p.id << ") - ip: " << p.ip << ", port: " << p.port;
 
@@ -102,15 +120,26 @@ vector<process*> parser(string fileToParse) ;
  */
 void writeLogs(string logFileName, vector<vector<string>> * logs);
 
-
+/*
+ * Split a string into a vector of string at each delimiter
+ *
+ * @param: s = string to split
+ * @param: delimiter = char where the string should be split
+ */
 vector<string> split(const std::string& s, char delimiter);
 
-//string vectorClockToString(vector<vector<int>> *vc);
+/*
+ * Transform a vector clock into a string, with a string of the form x#y#z
+ *
+ * @param: vc = vector clock to transform
+ */
 string vectorClockToString(vector<int> *vc);
+//string vectorClockToString(vector<vector<int>> *vc);
 
-//void stringToVectorClock(const std::string& vcPayload, int nbProc, vector<vector<int>> *vc);
-
+/*
+ * Transform a string into a vector clock, with a string of the form x#y#z
+ */
 void stringToVectorClock(const std::string& vcPayload, vector<int> *vc);
-void stringToVectorClock(const std::string& vcPayload, int nbProc, vector<int> *vc);
+//void stringToVectorClock(const std::string& vcPayload, vector<vector<int>> *vc);
 
 #endif //DA_PROJECT_UTILS_H

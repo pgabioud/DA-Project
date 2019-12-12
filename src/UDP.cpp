@@ -27,7 +27,6 @@ UDP::UDP(vector<process *> &processes, int curr_id, int m)
 
 UDP::~UDP()
 {
-
 }
 
 int UDP::send(int seq, int dest, int sender, string vc) {

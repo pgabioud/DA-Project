@@ -15,23 +15,22 @@
 
 using namespace std;
 
-static vector<vector<string>> logBuffer;
-
-void* single_send(void* args);
-
-void* broadcast_to_p(void* args);
-
 class Protocol;
-class UDP;
-class StubbornLinks;
-class PerfectLinks;
-class Urb;
+
+/*
+ * Sending process structure
+ *
+ * p = a Protocol object
+ * did = destination id
+ */
 typedef struct{
     Protocol* p;
     int did;
 }process_send_t;
 
-// A hash function used to hash a pair of any kind
+/*
+ * A hash function used to hash a pair of any kind
+ */
 struct hash_pair {
     template <class T1, class T2>
     size_t operator()(const pair<T1, T2>& p) const
@@ -42,6 +41,17 @@ struct hash_pair {
     }
 };
 
+/*
+ * Protocol class
+ *
+ * num_procs = number of process
+ * curr_proc = id of current process
+ * log = name of log file
+ * numMess = number of message
+ * buffSize = size of the log buffer to write into the log file
+ * buffIndex = current buffer index
+ * end = indicator of the end of write in the logs
+ */
 class Protocol {
 
 public:
@@ -59,20 +69,60 @@ public:
 
     virtual ~Protocol();
 
+    /*
+     * send message
+     *
+     * @param: seq = sequence number of message
+     * @param: dest = destination id of message
+     * @param: sender = sender id
+     * @param: vc = vector clock of sender
+     */
     virtual int send(int seq, int dest, int sender, string vc = "") = 0;
+
+    /*
+     * receiver message
+     *
+     * @param: message = pointer of the message object in which we store the received message
+     */
     virtual void rcv(Message **message) = 0;
 
+    /*
+     * broadcast to all process the message
+     *
+     * @parma seq = sequence number of the message
+     */
     void broadcast(int seq);
+
+    /*
+     * add the sequence number and original sender id in the logbuffer
+     *
+     * @param seq = sequence number
+     * @param os = id of original sender
+     */
     void deliver(int seq, int os);
+
+    /*
+     * start the broadcasting of messages
+     */
     void startSending();
+
+    /*
+     * write the remaining logs in the log buffer
+     */
     void finish();
 
+    /*
+     * initialize the socket for the corresponding proc
+     *
+     * @param = process that open the socket
+     */
     void init_socket(process* proc) ;
 
     mutex dlvmtx;
 
 protected:
     vector<pthread_t> threads;
+
 public:
     //vector clock
     vector<int> vectorClock;
@@ -87,21 +137,4 @@ public:
     vector<unordered_set<string>> acks_per_proc;
 };
 
-
-/*
-class Fifo : public Urb {
-
-public:
-    Fifo(vector<process*> & processes, int curr_id, int m);
-    ~Fifo() override;
-
-    int send(int seq, int dest, int sender);
-    void rcv(Message** message);
-
-public:
-    vector<int> next;
-    vector<vector<int>> unorderedMessage;
-};
-
-*/
 #endif //PROJECT_PROTOCOL_H

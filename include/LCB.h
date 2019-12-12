@@ -7,6 +7,9 @@
 
 #include "Urb.h"
 
+/*
+ * Localized Reliable Broadcast module
+ */
 class LCB : public Urb {
 
 public:
@@ -16,10 +19,13 @@ public:
     int send(int seq, int dest, int sender, string vc = "");
     void rcv(Message **message);
 
-    //bool canDeliver(pair<string, unsigned> key);
-
+    // Vector Clock
     vector<int> vectorClock;
+
+    // counter of messages
     float lsn;
+
+    //pending messages
     unordered_set<Message, hash_message> pending;
 
 

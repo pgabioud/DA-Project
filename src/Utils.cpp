@@ -46,13 +46,11 @@ vector<process*> parser(string fileToParse) {
     vector<process*> processVector;
 
     //Get number of Process
-
     if (file) {
         int nbProcess;
         file >> nbProcess;
 
         //Parsing IP and Ports
-
         string line;
         int countIp = 0;
         string delimiter = " ";
@@ -84,7 +82,6 @@ vector<process*> parser(string fileToParse) {
         }
 
         // Parsing Process Affectation
-/*
         int countBroad = 0;
         vector<vector<int>> processAffectation(nbProcess);
         while (countBroad < nbProcess) {
@@ -111,7 +108,6 @@ vector<process*> parser(string fileToParse) {
                 processVector[intId-1]->affectedProcess.push_back(countBroad);
             }
         }
-*/
         file.close();
     } else {
         throw string("##### error when trying to open the Membership file for parsing #####");
@@ -170,7 +166,7 @@ string vectorClockToString(vector<int> *vectorClock)
     return vc.substr(0, vc.size()-1);
 }
 
-void stringToVectorClock(const std::string& vcPayload, int nbProcs, vector<int> *vectorClock) {
+void stringToVectorClock(const std::string& vcPayload, vector<int> *vectorClock) {
     int i = 0;
     for (auto const &token: split(vcPayload, '#')) {
         (*vectorClock)[i] = stringToInt(token);
@@ -201,13 +197,5 @@ void stringToVectorClock(const std::string& vcPayload, int nbProcs, vector<vecto
             count += 1;
         }
     }
-}*/
-
-
-void stringToVectorClock(const std::string& vcPayload, vector<int> *vectorClock) {
-    int i = 0;
-    for (auto const &token: split(vcPayload, '#')) {
-        (*vectorClock)[i] = stringToInt(token);
-        i += 1;
-    }
 }
+*/

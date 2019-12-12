@@ -7,6 +7,9 @@
 
 #include "PerfectLinks.h"
 
+/*
+ * First In First Out module
+ */
 class Fifo : public Urb {
 
 public:
@@ -17,7 +20,10 @@ public:
     void rcv(Message** message);
 
 public:
+    //next sequence of message that should be deliver for each process
     vector<int> next;
+
+    //pending message to be delivered
     set<vector<int>> unorderedMessage;
 };
 

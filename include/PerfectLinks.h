@@ -18,12 +18,8 @@ public:
     int send(int seq, int dest, int sender, string vc = "");
     void rcv(Message **message);
 
-    //Need for perfect links
-    // perfect links no duplication container
+    //Perfect links no duplication container
     vector<unordered_set<pair<int,int>, hash_pair>> pl_delivered;
-
-
 };
-
 
 #endif //DA_PROJECT_PERFECTLINKS_H
