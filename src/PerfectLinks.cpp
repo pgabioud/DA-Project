@@ -51,6 +51,5 @@ void PerfectLinks::rcv(Message **m) {
         (*m)->discard = true;
     }
 
-
 }
 

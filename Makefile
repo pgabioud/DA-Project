@@ -4,7 +4,7 @@ SRC = src
 BIN = bin
 SAN = -fsanitize=address
 
-CFLAGS=-Wall -g -pthread -std=c++11 -I $(INCLUDES)/ 
+CFLAGS=-Wall -g -pthread -std=c++11 $(SAN) -I $(INCLUDES)/ 
 
 $(BINDIR):
 	mkdir -p $(BINDIR)																																																																																																																																																																																																																																																																																																																																																		

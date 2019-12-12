@@ -98,7 +98,8 @@ void Protocol::startSending() {
 }
 
 void Protocol::deliver(int seq, int os) {
-    logBuffer[buffIndex] = make_pair(seq,os);
+    dlvmtx.lock();
+    logBuffer[buffIndex] = "d " + to_string(os + 1) + " " + to_string(seq);
     buffIndex +=1;
 
     //try to deliver
@@ -108,38 +109,49 @@ void Protocol::deliver(int seq, int os) {
         ofs.open(log, std::ofstream::out | std::ofstream::app);
         if (ofs.is_open()) {
             for(auto& p : logBuffer ) {
-                ofs <<  "d " + to_string(p.second + 1) + " " + to_string(p.first) << endl;
+                ofs << p << endl;
             }
         }
         ofs.close();
         buffIndex = 0;
     }
+    dlvmtx.unlock();
 
 }
 
 void Protocol::broadcast(int seq) {
-// write to log
-    vector<string> newLog = {"b",  to_string(seq)};
-    ofstream ofs;
-    ofs.open(log, std::ofstream::out | std::ofstream::app);
-    if (ofs.is_open()) {
-        ofs << newLog[0] + " "+newLog[1] << endl;
+    dlvmtx.lock();
+    // write to log
+    logBuffer[buffIndex] = ("b " + to_string(seq));
+    buffIndex += 1;
+
+    //try to deliver
+    if(buffIndex >= buffSize) {
+        // write to log
+        ofstream ofs;
+        ofs.open(log, std::ofstream::out | std::ofstream::app);
+        if (ofs.is_open()) {
+            for(auto& p : logBuffer ) {
+                ofs << p << endl;
+            }
+        }
+        ofs.close();
+        buffIndex = 0;
     }
-    ofs.close();
+    dlvmtx.unlock();
 }
 
 void Protocol::finish() {   ofstream ofs;
     end = true;
 
-    dlvmtx.lock();
     ofs.open(log, std::ofstream::out | std::ofstream::app);
     if (ofs.is_open()) {
         for(int i = 0; i < buffIndex; i++) {
-            ofs <<  "d " + to_string(logBuffer[i].second + 1) + " " + to_string(logBuffer[i].first) << endl;
+            ofs <<  logBuffer[i] << endl;
         }
         logBuffer.clear();
     }
     ofs.close();
 
-    dlvmtx.unlock();
+
 }

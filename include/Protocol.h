@@ -131,7 +131,7 @@ public:
     vector<pair<string, string>> pending;
 
     //log
-    vector<pair<int,int>> logBuffer;
+    vector<string> logBuffer;
 
     //Need for perfect links
     vector<unordered_set<string>> acks_per_proc;

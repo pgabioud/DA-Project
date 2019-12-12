@@ -41,7 +41,6 @@ private:
 public:
     // vector containing message sets per process to send
     vector<unordered_set<Message, hash_message>> sl_pending_messages;
-
 };
 
 
