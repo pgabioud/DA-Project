@@ -31,11 +31,12 @@ LCB::~LCB()
 }
 
 int LCB::send(int seq, int dest, int sender, string vc) {
-    vectorClock[curr_proc] = lsn;
+    vector<int> W(vectorClock);
+    W[curr_proc]= lsn;
     lsn++;
 
     //call urb broadcasting
-    return Urb::send(seq, dest, sender, vectorClockToString(&vectorClock));
+    return Urb::send(seq, dest, sender, vectorClockToString(&W));
 }
 
 void LCB::rcv(Message **m) {
@@ -59,11 +60,12 @@ void LCB::rcv(Message **m) {
     vector<int> pendingVectorClock(num_procs, 0);
 
     //attempt delivery
-    bool invalid = false;
+    bool invalid;
 
     auto m_it = pending.begin();
 
     while (m_it != pending.end()) {
+        if(pending.empty()) break;
         Message curr_m = *m_it;
         stringToVectorClock(curr_m.strSourceVC, &pendingVectorClock);
         invalid = false;
@@ -91,14 +93,14 @@ void LCB::rcv(Message **m) {
             deliver(curr_m.seqNum, curr_m.os);
             pending.erase(m_it);
             m_it = pending.begin();
-            if((*m)->os != curr_proc) vectorClock[(*m)->os] += 1;
+            vectorClock[(*m)->os] += 1;
         } else {
             //advace iterator to the next message if not valid
             m_it++;
         }
     }
 
-    cout << "Pending size : " << pending.size() << endl;
+    //cout << "Pending size : " << pending.size() << endl;
     //cout <<"LCB received : " << (**m) << endl;
 
 

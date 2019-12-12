@@ -94,6 +94,7 @@ void StubbornLinks::rcv(Message **m) {
         return;
     }
 
+
     if((*m)->type == 1) {
         // payload is of format "ack # #"
         pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
