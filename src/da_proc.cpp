@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     //initialize application
 
     vector<process*> mProcs = parser(filename);
-    auto *prot = new LCB(mProcs, curr_id - 1, m);
+    auto *prot = new Urb(mProcs, curr_id - 1, m);
 
     cout << "Protocol initiated" << endl;
 

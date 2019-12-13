@@ -106,7 +106,7 @@ void UDP::rcv(Message **m) {
             type = 0;
             os = stringToInt(tokens[1]);
             seq = stringToInt(tokens[0]);
-            sourceVC = tokens[2];
+            //sourceVC = tokens[2];
         }
 
         //cout << "UDP receive from : [" << idSource + 1 <<"] : [" << seq << " " << os + 1 << "]" << endl;

@@ -24,31 +24,35 @@ void* stubbornRun(void* args) {
     process_send_t* tmp = (process_send_t*) args;
     StubbornLinks* prot = (StubbornLinks*)(tmp->p);
     int did = tmp->did;
-    //vector<pair<int,int>> messages_copy;
-    vector<Message> messages_copy;
-
+    TimeoutInfo t_info;
+    long init_size;
     while(!prot->isFinished()) {
+        init_size = prot->sl_pending_messages[did].size();
         if(prot->sl_pending_messages[did].empty()) {
             continue;
         }
 
-        // Copying vector by copy function
-        //copy(prot->sl_pending[did].begin(), prot->sl_pending[did].end(), back_inserter(messages_copy));
-        prot->mtx.lock();
         for(auto it : prot->sl_pending_messages[did]) {
+
             high_resolution_clock::time_point now = high_resolution_clock::now();
-            Message m = it.first;
-            TimeoutInfo t_info = it.second;
+            t_info = it.second;
+            if(t_info.sent) {
+                prot->sl_pending_messages[did].erase(it.first);
+                break;
+            }
             long time_span = duration_cast<nanoseconds>(now - t_info.timeofsend).count();
             if (time_span > t_info.timeout_) {
                 //resend
-                prot->UDP::send(m.seqNum, m.did, m.os, m.strSourceVC); // UDP send
-
+                prot->UDP::send(it.first.seqNum, it.first.did, it.first.os, it.first.strSourceVC); // UDP send
                 t_info.timeout_ *= 2;
                 it.second = t_info;
             }
+
+            if(init_size != prot->sl_pending_messages[did].size())  {
+                prot->mtx.unlock();
+                break;
+            }
         }
-        prot->mtx.unlock();
     }
     free(args);
     return nullptr;
@@ -108,12 +112,10 @@ void StubbornLinks::rcv(Message **m) {
 
     if((*m)->type == 1) {
         // payload is of format "ack # #"
-        pair<int,int> rcv = make_pair((*m)->seqNum, (*m)->os) ;
         Message key((*m)->sid,(*m)->did,0,(*m)->os, (*m)->seqNum);
 
-        mtx.lock();
-        sl_pending_messages[(*m)->sid].erase(key);
-        mtx.unlock();
+        sl_pending_messages[(*m)->sid][key].sent = true;
+
         (*m)->discard = true;
         return;
 

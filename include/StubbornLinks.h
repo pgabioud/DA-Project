@@ -25,11 +25,11 @@ struct hash_message {
 
 struct TimeoutInfo {
     high_resolution_clock::time_point  timeofsend; //in nanoseconds
-    int timeout_; //in nanoseconds
-
+    long long timeout_; //in nanoseconds
+    bool sent = false;
     TimeoutInfo() {
         timeofsend = high_resolution_clock::now();
-        timeout_ = 100000000;
+        timeout_ = 100;
     }
 
 };

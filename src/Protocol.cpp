@@ -97,6 +97,17 @@ void Protocol::startSending() {
     }
 }
 
+/*
+void Protocol::startSending() {
+    for(int i = 1; i <=numMess;i++) {
+        broadcast(i);
+        for(int j=0; j < num_procs; j++) {
+            if(j!= curr_proc)     send(i, j, curr_proc);
+        }
+    }
+}
+*/
+
 void Protocol::deliver(int seq, int os) {
     dlvmtx.lock();
     logBuffer[buffIndex] = "d " + to_string(os + 1) + " " + to_string(seq);
