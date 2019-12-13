@@ -31,26 +31,25 @@ void* stubbornRun(void* args) {
         if(prot->sl_pending_messages[did].empty()) {
             continue;
         }
-
-        for(auto it : prot->sl_pending_messages[did]) {
-
+        auto it = prot->sl_pending_messages[did].cbegin();
+        while(it != prot->sl_pending_messages[did].cend()) {
+            prot->mtx.lock();
+            auto key = (*it);
             high_resolution_clock::time_point now = high_resolution_clock::now();
-            t_info = it.second;
+            t_info = key.second;
             if(t_info.sent) {
-                prot->sl_pending_messages[did].erase(it.first);
+                prot->mtx.unlock();
+                it = prot->sl_pending_messages[did].erase(it);
                 break;
+            } else {
+                ++it;
             }
+            prot->mtx.unlock();
             long time_span = duration_cast<nanoseconds>(now - t_info.timeofsend).count();
             if (time_span > t_info.timeout_) {
                 //resend
-                prot->UDP::send(it.first.seqNum, it.first.did, it.first.os, it.first.strSourceVC); // UDP send
-                t_info.timeout_ *= 2;
-                it.second = t_info;
-            }
-
-            if(init_size != prot->sl_pending_messages[did].size())  {
-                prot->mtx.unlock();
-                break;
+                prot->UDP::send(key.first.seqNum, key.first.did, key.first.os, key.first.strSourceVC); // UDP send
+                key.second.updateTimeout();
             }
         }
     }
@@ -113,9 +112,9 @@ void StubbornLinks::rcv(Message **m) {
     if((*m)->type == 1) {
         // payload is of format "ack # #"
         Message key((*m)->sid,(*m)->did,0,(*m)->os, (*m)->seqNum);
-
+        mtx.lock();
         sl_pending_messages[(*m)->sid][key].sent = true;
-
+        mtx.unlock();
         (*m)->discard = true;
         return;
 

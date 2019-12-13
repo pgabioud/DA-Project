@@ -32,6 +32,10 @@ struct TimeoutInfo {
         timeout_ = 100;
     }
 
+    void updateTimeout() {
+        timeout_ *= 2;
+    }
+
 };
 /*
  * Stubborn link module

@@ -34,6 +34,7 @@ int LCB::send(int seq, int dest, int sender, string vc) {
     vector<int> W(vectorClock);
     W[curr_proc]= lsn;
     lsn++;
+    broadcast(seq);
 
     //call urb broadcasting
     return Urb::send(seq, dest, sender, vectorClockToString(&W));
@@ -104,7 +105,7 @@ void LCB::rcv(Message **m) {
         }
     }
 
-    cout << "P" << curr_proc + 1 << " Pending size : " << pending.size() << endl;
+    //cout << "P" << curr_proc + 1 << " Pending size : " << pending.size() << endl;
     //cout <<"LCB received : " << (**m) << endl;
 
 }
