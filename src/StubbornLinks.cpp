@@ -18,25 +18,24 @@
 
 //Stubborn Links Modules
 
-static bool finish = false;
 
 void* stubbornRun(void* args) {
     process_send_t* tmp = (process_send_t*) args;
     StubbornLinks* prot = (StubbornLinks*)(tmp->p);
     int did = tmp->did;
     TimeoutInfo t_info;
-    long init_size;
     while(!prot->isFinished()) {
-        init_size = prot->sl_pending_messages[did].size();
+
         if(prot->sl_pending_messages[did].empty()) {
             continue;
         }
         auto it = prot->sl_pending_messages[did].cbegin();
+        // update sending queue
         while(it != prot->sl_pending_messages[did].cend()) {
             prot->mtx.lock();
             auto key = (*it);
             high_resolution_clock::time_point now = high_resolution_clock::now();
-            t_info = key.second;
+
             if(t_info.sent) {
                 prot->mtx.unlock();
                 it = prot->sl_pending_messages[did].erase(it);
@@ -45,12 +44,19 @@ void* stubbornRun(void* args) {
                 ++it;
             }
             prot->mtx.unlock();
-            long time_span = duration_cast<nanoseconds>(now - t_info.timeofsend).count();
-            if (time_span > t_info.timeout_) {
+        }
+
+        //resend
+        auto m_it = prot->sl_pending_messages[did].begin();
+        while(m_it != prot->sl_pending_messages[did].end()) {
+            long time_span = duration_cast<nanoseconds>(high_resolution_clock::now() - t_info.timeofsend).count();
+            //cout << (*m_it).second.timeout_ << endl;
+            if (time_span > (*m_it).second.timeout_) {
                 //resend
-                prot->UDP::send(key.first.seqNum, key.first.did, key.first.os, key.first.strSourceVC); // UDP send
-                key.second.updateTimeout();
+                prot->UDP::send((*m_it).first.seqNum, (*m_it).first.did, (*m_it).first.os, (*m_it).first.strSourceVC); // UDP send
+                (*m_it).second.timeout_ += 2;
             }
+            m_it++;
         }
     }
     free(args);

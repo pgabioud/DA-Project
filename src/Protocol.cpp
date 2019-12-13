@@ -103,7 +103,6 @@ void Protocol::startSending() {
         t_req.tv_nsec = 50000000L;
         nanosleep(&t_req, &t_rem);
     }
-    cout << "send" << endl;
 }
 
 /*
