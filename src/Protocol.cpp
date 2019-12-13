@@ -100,7 +100,7 @@ void Protocol::startSending() {
 
         struct timespec t_req, t_rem;
         t_req.tv_sec = 0;
-        t_req.tv_nsec = 5000000L;
+        t_req.tv_nsec = 50000000L;
         nanosleep(&t_req, &t_rem);
     }
     cout << "send" << endl;
