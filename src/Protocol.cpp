@@ -93,7 +93,17 @@ Protocol::~Protocol()
 void Protocol::startSending() {
     for(int i = 1; i <=numMess;i++) {
         send(i, 0, curr_proc);
+        /*
+        if(i%10 == 0) {
+            sleep(1);
+        }*/
+
+        struct timespec t_req, t_rem;
+        t_req.tv_sec = 0;
+        t_req.tv_nsec = 5000000L;
+        nanosleep(&t_req, &t_rem);
     }
+    cout << "send" << endl;
 }
 
 /*

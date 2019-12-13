@@ -113,7 +113,8 @@ void StubbornLinks::rcv(Message **m) {
         // payload is of format "ack # #"
         Message key((*m)->sid,(*m)->did,0,(*m)->os, (*m)->seqNum);
         mtx.lock();
-        sl_pending_messages[(*m)->sid][key].sent = true;
+        int msid = (*m)->sid;
+        sl_pending_messages[msid][key].sent = true;
         mtx.unlock();
         (*m)->discard = true;
         return;
